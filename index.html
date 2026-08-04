@@ -277,35 +277,46 @@
             document.getElementById('displayOverlay').style.display = 'none';
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
-            playAirportChime();
+            playAirportChime3Times();
         }
 
-        function playAirportChime() {
+        // دالة نغمة المطار المحدثة: صوت أعلى، أبطأ، ومكررة 3 مرات (تن تن .. تن تن .. تن تن)
+        function playAirportChime3Times() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc1 = audioCtx.createOscillator();
-                const gain1 = audioCtx.createGain();
-                osc1.type = 'sine';
-                osc1.frequency.setValueAtTime(659.25, audioCtx.currentTime);
-                gain1.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-                osc1.connect(gain1);
-                gain1.connect(audioCtx.destination);
-                osc1.start();
-                osc1.stop(audioCtx.currentTime + 0.4);
+                
+                function playSingleChime(startTime) {
+                    // النغمة الأولى (الأعلى)
+                    const osc1 = audioCtx.createOscillator();
+                    const gain1 = audioCtx.createGain();
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(659.25, startTime);
+                    gain1.gain.setValueAtTime(0.5, startTime); // رفع مستوى الصوت بوضوح
+                    gain1.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5); // وقت أطول لتصبح أبطأ وأعمق
+                    osc1.connect(gain1);
+                    gain1.connect(audioCtx.destination);
+                    osc1.start(startTime);
+                    osc1.stop(startTime + 0.5);
 
-                setTimeout(() => {
+                    // النغمة الثانية (الأخفض قليلاً لتعطاء نغمة تن-تن)
                     const osc2 = audioCtx.createOscillator();
                     const gain2 = audioCtx.createGain();
                     osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(523.25, audioCtx.currentTime);
-                    gain2.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    osc2.frequency.setValueAtTime(523.25, startTime + 0.35);
+                    gain2.gain.setValueAtTime(0.5, startTime + 0.35);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, startTime + 0.9);
                     osc2.connect(gain2);
                     gain2.connect(audioCtx.destination);
-                    osc2.start();
-                    osc2.stop(audioCtx.currentTime + 0.5);
-                }, 300);
+                    osc2.start(startTime + 0.35);
+                    osc2.stop(startTime + 0.9);
+                }
+
+                let now = audioCtx.currentTime;
+                // التكرار 3 مرات مع فاصل زمني هادئ ومناسب (مثل المطارات)
+                playSingleChime(now);
+                playSingleChime(now + 1.2);
+                playSingleChime(now + 2.4);
+
             } catch(e) {}
         }
 
@@ -345,8 +356,10 @@
             document.getElementById('mainPatient').innerText = data.name;
             document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
 
-            playAirportChime();
+            // تشغيل النغمة الثلاثية للمطار قبل النداء الصوتي
+            playAirportChime3Times();
 
+            // الانتظار حتى تنتهي النغمات الثلاث (حوالي 3.3 ثانية) ثم يبدأ نطق الصوت
             setTimeout(() => {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
@@ -377,7 +390,7 @@
                         processQueue();
                     }, 4000);
                 }
-            }, 600);
+            }, 3300);
 
             saveToArchive(data);
         }
