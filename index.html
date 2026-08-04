@@ -88,7 +88,6 @@
 
     <!-- الشاشة الرئيسية لعرض النداءات -->
     <div id="displayScreen" style="display: none;">
-        <!-- شريط علوي يضم تجمع الأحساء الصحي في أقصى اليسار تماماً -->
         <div class="top-header">
             <div class="cluster-badge">تجمع الأحساء الصحي</div>
         </div>
@@ -197,6 +196,7 @@
         let isScreenActive = false;
         let isCalling = false;
         let callQueue = [];
+        let isAdminLoggedIn = false; // تتبع حالة دخول الأدمن
 
         const defaultClinics = [
             "عيادة طب الأسرة رقم 1",
@@ -423,8 +423,9 @@
             
             if (panel.style.display === 'block') {
                 panel.style.display = 'none';
-                btn.innerText = '⚙️';
-                btn.title = 'إعدادات الأدمن';
+                // إذا كان الأدمن مسجل الدخول، الزر يغلق اللوحة ويبقى علامة X أو يعود للترس حسب الرغبة، الأفضل يبقيها X طالما اللوحة مفتوحة أو يعيدها للترس
+                btn.innerText = isAdminLoggedIn ? '✕' : '⚙️';
+                btn.title = isAdminLoggedIn ? 'إغلاق الإعدادات' : 'إعدادات الأدمن';
             } else {
                 panel.style.display = 'block';
                 btn.innerText = '✕';
@@ -437,8 +438,15 @@
             const currentPin = localStorage.getItem('umran_admin_pin') || '123456';
 
             if (pin === currentPin) {
+                isAdminLoggedIn = true; // تثبيت حالة تسجيل الدخول
                 document.getElementById('adminLoginSection').style.display = 'none';
                 document.getElementById('adminActionsSection').style.display = 'block';
+                
+                // تحويل زر الترس إلى علامة إغلاق فورية بعد نجاح الدخول وتعديل الإعدادات
+                const btn = document.getElementById('adminToggleBtn');
+                btn.innerText = '✕';
+                btn.title = 'إغلاق الإعدادات';
+
                 updateClinicsUI();
             } else {
                 alert('الرقم السري غير صحيح!');
