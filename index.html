@@ -21,9 +21,11 @@
         #displayScreen { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 10; padding: 15px 25px; flex-direction: column; justify-content: space-between; overflow: hidden; }
 
         .top-header { display: flex; justify-content: flex-end; align-items: center; width: 100%; padding-bottom: 8px; border-bottom: 2px solid #1e293b; }
-        .cluster-logo { height: 50px; width: auto; object-fit: contain; background: #111827; padding: 4px 12px; border-radius: 10px; border: 1.5px solid #38bdf8; }
+        
+        /* تم تكبير الشعار وجعله مفرغاً وواضحاً بشكل ممتاز */
+        .cluster-logo { height: 85px; width: auto; object-fit: contain; background: transparent; padding: 2px 6px; }
 
-        .content-grid { display: grid; grid-template-columns: 580px 1fr; gap: 20px; height: calc(100vh - 80px); align-items: center; padding-top: 5px; }
+        .content-grid { display: grid; grid-template-columns: 580px 1fr; gap: 20px; height: calc(100vh - 95px); align-items: center; padding-top: 5px; }
         
         .sidebar { background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; height: 98%; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
         .archive-title { color: #ffc107; text-align: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #374151; font-weight: bold; font-size: 1.3rem; }
@@ -89,7 +91,7 @@
     <!-- الشاشة الرئيسية لعرض النداءات -->
     <div id="displayScreen" style="display: none;">
         <div class="top-header">
-            <img src="https://github.com/blu2ris-create/clinic-queue-system/blob/main/logo.png.png?raw=true" alt="شعار تجمع الأحساء الصحي" class="cluster-logo">
+            <img src="https://github.com/blu2ris-create/clinic-queue-system/blob/main/logo.png%20(2).png?raw=true" alt="الشعار الرسمي" class="cluster-logo">
         </div>
 
         <div class="content-grid">
@@ -437,7 +439,7 @@
             if (!clinics.includes(name)) {
                 clinics.push(name);
                 saveClinics(clinics);
-                input.value.trim = '';
+                input.value = '';
             } else {
                 alert('هذه العيادة موجودة مسبقاً');
             }
