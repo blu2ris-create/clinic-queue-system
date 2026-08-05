@@ -268,7 +268,7 @@
         });
 
         function startMode(mode) {
-            document.getElementById('roleSelector').style.display = 'none';
+            document.getElementById('roleSelector').style.display, display = 'none';
             if (mode === 'display') {
                 document.getElementById('displayOverlay').style.display = 'flex';
             } else {
@@ -346,12 +346,12 @@
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
                     
-                    // النص الرسمي الأصلي بالضبط ولكن بدون أي تشكيل أو حركات أو تنوين لتفادي النطق الروبوت
-                    const cleanText = `يرجى من المراجع ${data.name} التوجه إلى ${data.clinic}`;
-                    const utterance = new SpeechSynthesisUtterance(cleanText);
+                    // كتابة النص بالطريقة الصوتية المباشرة (بدون إعراب أو حروف ساكنة منفرة) لينطقها المتصفح ككلمة واحدة متصلة طبيعية
+                    const spokenText = "يرجو من المراجع " + data.name + " التوجه إلى " + data.clinic;
+                    const utterance = new SpeechSynthesisUtterance(spokenText);
                     
                     utterance.lang = 'ar-SA';
-                    utterance.rate = 0.85; 
+                    utterance.rate = 0.85; // سرعة هادئة وواضحة جداً
                     utterance.pitch = 1.0;
                     
                     let bestVoice = getBestNaturalArabicVoice();
