@@ -25,7 +25,7 @@
         /* شعار التجمع بحجم كبير ومناسب جداً */
         .cluster-logo { height: 110px; width: auto; object-fit: contain; background: transparent; }
 
-        /* التخطيط الشبكي الثابت للشاشات الكبيرة بجانب بعضها البعض (تم زيادة عرض الجدول إلى 600 بكسل) */
+        /* التخطيط الشبكي الثابت للشاشات الكبيرة (عرض الجدول 600 بكسل) */
         .content-grid { display: grid; grid-template-columns: 600px 1fr; gap: 20px; height: calc(100vh - 120px); align-items: center; padding-top: 10px; }
         
         .sidebar { background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; height: 98%; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
@@ -311,11 +311,32 @@
             client.publish(uniqueTopic, JSON.stringify(callData));
 
             const msg = document.getElementById('successMsg');
-            msg.style.display = 'block';
+            msg.style.display.display = 'block';
             setTimeout(() => { msg.style.display = 'none'; }, 2000);
             
             nameInput.value = '';
             nameInput.focus();
+        }
+
+        // اختيار أفضل صوت طبيعي وبشري متاح في الجهاز
+        function getBestNaturalArabicVoice() {
+            if (!('speechSynthesis' in window)) return null;
+            let voices = window.speechSynthesis.getVoices();
+            
+            // البحث عن أصوات عربية عالية الجودة (مثل Natural أو Maged أو Naayف أو سيري)
+            let arabicVoices = voices.filter(v => v.lang.startsWith('ar') || v.lang.includes('AR'));
+            
+            if (arabicVoices.length === 0) return null;
+
+            // محاولة إيجاد صوت مايكروسوفت أو أبل الحديث المخصص
+            let preferredVoice = arabicVoices.find(v => v.name.includes('Natural') || v.name.includes('Microsoft') || v.name.includes('Maged') || v.name.includes('Tarik'));
+            
+            return preferredVoice || arabicVoices[0];
+        }
+
+        // تحميل الأصوات مسبقاً لضمان جهوزيتها
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = getBestNaturalArabicVoice;
         }
 
         function processQueue() {
@@ -332,14 +353,18 @@
             setTimeout(() => {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(`يرجى من المراجع ${data.name} التوجه إلى ${data.clinic}`);
-                    utterance.lang = 'ar-SA';
-                    utterance.rate = 0.85;
                     
-                    let voices = window.speechSynthesis.getVoices();
-                    let arabicVoice = voices.find(v => v.lang.startsWith('ar'));
-                    if (arabicVoice) {
-                        utterance.voice = arabicVoice;
+                    // صياغة الجملة بطريقة مريحة ومنغمة نطقاً تشبه البشر
+                    const speechText = `يرجى من المراجع، ${data.name}، التوجه إلى، ${data.clinic}`;
+                    const utterance = new SpeechSynthesisUtterance(speechText);
+                    
+                    utterance.lang = 'ar-SA';
+                    utterance.rate = 0.82; // تقليل السرعة قليلاً لتكون نبرة هادئة وواضحة مثل النداء البشري
+                    utterance.pitch = 1.0; // ضبط طبقة الصوت لتكون طبيعية
+                    
+                    let bestVoice = getBestNaturalArabicVoice();
+                    if (bestVoice) {
+                        utterance.voice = bestVoice;
                     }
 
                     utterance.onend = () => {
@@ -460,6 +485,7 @@
                 alert('الرقم السري لا يقل عن 3 خانات');
                 return;
             }
+            localStorage.setItem('umran_health_archive', localStorage.getItem('umran_health_archive')); // keep intact
             localStorage.setItem('umran_admin_pin', newPin);
             alert('تم تغيير الرقم السري بنجاح!');
             document.getElementById('newPinInput').value = '';
