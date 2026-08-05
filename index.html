@@ -17,38 +17,63 @@
         
         #fullscreenBtn { position: fixed; bottom: 15px; left: 15px; z-index: 9998; display: none; background: #ffc107; color: #0b0f19; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.4); cursor: pointer; font-size: 0.9rem; }
 
-        /* الشاشة الرئيسية لعرض النداءات (تأخذ الشاشة كاملة بدقة وثبات) */
-        #displayScreen { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 10; padding: 15px 25px; flex-direction: column; justify-content: space-between; overflow: hidden; }
+        /* الشاشة الرئيسية لعرض النداءات متجاوبة كلياً للجوال والشاشات الكبيرة */
+        #displayScreen { display: none; width: 100vw; min-height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 10; padding: 10px 15px; flex-direction: column; justify-content: space-between; overflow-y: auto; }
 
-        .top-header { display: flex; justify-content: flex-end; align-items: center; width: 100%; padding-bottom: 8px; border-bottom: 2px solid #1e293b; }
+        .top-header { display: flex; justify-content: flex-end; align-items: center; width: 100%; padding-bottom: 6px; border-bottom: 2px solid #1e293b; margin-bottom: 10px; }
         
-        /* شعار التجمع بحجم كبير ومناسب جداً */
-        .cluster-logo { height: 110px; width: auto; object-fit: contain; background: transparent; }
+        /* شعار التجمع الرسمي */
+        .cluster-logo { height: 75px; width: auto; object-fit: contain; background: transparent; }
+        @media (min-width: 992px) {
+            .cluster-logo { height: 110px; }
+        }
 
-        /* التخطيط الشبكي الثابت للشاشات الكبيرة (عرض الجدول 600 بكسل) */
-        .content-grid { display: grid; grid-template-columns: 600px 1fr; gap: 20px; height: calc(100vh - 120px); align-items: center; padding-top: 10px; }
+        /* التخطيط الشبكي المتجاوب */
+        .content-grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding-bottom: 10px; }
+        @media (min-width: 992px) {
+            .content-grid { grid-template-columns: 600px 1fr; height: calc(100vh - 140px); overflow: hidden; align-items: center; }
+        }
         
-        .sidebar-wrapper { display: flex; flex-direction: column; height: 98%; justify-content: flex-start; }
+        .sidebar-wrapper { display: flex; flex-direction: column; height: 100%; justify-content: flex-start; }
         
         /* شريط التاريخ في المنتصف فوق الجدول تماماً */
-        .live-date-banner { text-align: center; color: #38bdf8; font-size: 1.15rem; font-weight: bold; margin-bottom: 8px; background: #111827; border: 1px solid #1f2937; padding: 8px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .live-date-banner { text-align: center; color: #38bdf8; font-size: 1.05rem; font-weight: bold; margin-bottom: 6px; background: #111827; border: 1px solid #1f2937; padding: 8px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
-        .sidebar { background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; height: calc(100% - 48px); overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
-        .archive-title { color: #ffc107; text-align: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #374151; font-weight: bold; font-size: 1.3rem; }
+        .sidebar { background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 15px; display: flex; flex-direction: column; max-height: 350px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        @media (min-width: 992px) {
+            .sidebar { max-height: none; height: calc(100% - 45px); }
+        }
+
+        .archive-title { color: #ffc107; text-align: center; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #374151; font-weight: bold; font-size: 1.2rem; }
         .table-container { flex-grow: 1; overflow-y: auto; }
-        .table-dark-custom { background-color: transparent; color: #ffffff; font-size: 1.15rem; text-align: center; width: 100%; }
-        .table-dark-custom th { background-color: #1f2937; color: #38bdf8; position: sticky; top: 0; z-index: 2; padding: 14px 10px; font-size: 1.2rem; }
-        .table-dark-custom td { background-color: #151c2c; color: #f3f4f6; border-bottom: 1px solid #1f2937; vertical-align: middle; padding: 18px 10px; }
+        .table-dark-custom { background-color: transparent; color: #ffffff; font-size: 1.05rem; text-align: center; width: 100%; }
+        .table-dark-custom th { background-color: #1f2937; color: #38bdf8; position: sticky; top: 0; z-index: 2; padding: 10px 8px; font-size: 1.1rem; }
+        .table-dark-custom td { background-color: #151c2c; color: #f3f4f6; border-bottom: 1px solid #1f2937; vertical-align: middle; padding: 12px 8px; }
 
-        .main-area { background: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 20px; height: 98%; display: flex; flex-direction: column; justify-content: space-around; align-items: center; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .main-area { background: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; justify-content: space-around; align-items: center; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); min-height: 380px; }
+        @media (min-width: 992px) {
+            .main-area { height: 98%; }
+        }
         
-        .middle-header { text-align: center; margin-top: 5px; }
-        .middle-header .main-title { font-size: 2.8rem; font-weight: bold; color: #ffffff; line-height: 1.1; margin-bottom: 2px; }
-        .middle-header .sub-title { font-size: 1.35rem; color: #38bdf8; font-weight: bold; }
+        .middle-header { text-align: center; margin-bottom: 5px; }
+        .middle-header .main-title { font-size: 2.2rem; font-weight: bold; color: #ffffff; line-height: 1.1; margin-bottom: 2px; }
+        @media (min-width: 992px) {
+            .middle-header .main-title { font-size: 2.8rem; }
+        }
+        .middle-header .sub-title { font-size: 1.15rem; color: #38bdf8; font-weight: bold; }
+        @media (min-width: 992px) {
+            .middle-header .sub-title { font-size: 1.35rem; }
+        }
 
-        .display-box { background: #151c2c; border: 2px solid #334155; border-radius: 25px; padding: 35px 30px; text-align: center; width: 100%; max-width: 780px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); margin-bottom: 10px; }
-        .display-number { font-size: 6.5rem; font-weight: bold; color: #ffc107; margin-bottom: 10px; line-height: 1.1; word-break: break-all; }
-        .display-text { font-size: 2.2rem; color: #e2e8f0; font-weight: bold; }
+        .display-box { background: #151c2c; border: 2px solid #334155; border-radius: 25px; padding: 25px 20px; text-align: center; width: 100%; max-width: 780px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); margin: 10px 0; }
+        .display-number { font-size: 4.5rem; font-weight: bold; color: #ffc107; margin-bottom: 8px; line-height: 1.1; word-break: break-all; }
+        @media (min-width: 768px) {
+            .display-number { font-size: 6.5rem; }
+        }
+        .display-text { font-size: 1.6rem; color: #e2e8f0; font-weight: bold; }
+        @media (min-width: 768px) {
+            .display-text { font-size: 2.2rem; }
+        }
 
         /* لوحة التحكم للإستقبال */
         #controlScreen { display: none; width: 100%; max-width: 550px; background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); position: relative; z-index: 100; margin: 20px auto; overflow-y: auto; }
@@ -254,14 +279,13 @@
             const now = new Date();
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             const dateString = now.toLocaleDateString('ar-SA', options);
-            const dateKeyString = now.toISOString().split('T')[0]; // صيغة YYYY-MM-DD
+            const dateKeyString = now.toISOString().split('T')[0];
 
             const dateElement = document.getElementById('liveDateDisplay');
             if (dateElement) {
                 dateElement.innerText = `📅 ${dateString}`;
             }
 
-            // تصفير تلقائي إذا تغير التاريخ عن اليوم السابق
             let lastSavedDate = localStorage.getItem('umran_system_date');
             if (lastSavedDate !== dateKeyString) {
                 localStorage.setItem('umran_system_date', dateKeyString);
@@ -274,7 +298,7 @@
             updateClinicsUI();
             loadArchive();
             updateLiveDate();
-            setInterval(updateLiveDate, 60000); // تحديث يومي/دوري للتاريخ
+            setInterval(updateLiveDate, 60000);
 
             document.addEventListener('fullscreenchange', () => {
                 if (!document.fullscreenElement && isScreenActive) {
@@ -448,11 +472,17 @@
             `).join('');
         }
 
+        // تصفير فوري وتحديث الشاشة بدون الحاجة لإعادة تحميل الصفحة
         function manualResetArchive() {
-            if (confirm('هل أنت متأكد من رغبتك في مسح جدول النداءات السابقة وتصفيره بالكامل؟')) {
+            if (confirm('تنبيه: هل أنت متأكد من رغبتك في مسح جدول النداءات السابقة وتصفيره بالكامل؟')) {
                 localStorage.setItem('umran_health_archive', JSON.stringify([]));
                 loadArchive();
-                alert('تم تصفير الجدول بنجاح!');
+                
+                // تحديث الشاشة الرئيسية فورياً في حال كانت مفتوحة بنفس المتصفح
+                const tbody = document.getElementById('archiveTableBody');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-muted">لا توجد نداءات مسجلة</td></tr>`;
+                }
             }
         }
 
