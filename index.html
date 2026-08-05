@@ -127,7 +127,7 @@
     </div>
 
     <!-- لوحة التحكم للإستقبال والأدمن -->
-    <div id="controlScreen">
+    <div id="controlScreen" style="display: none;">
         <button id="adminToggleBtn" class="admin-gear-btn" onclick="toggleAdminPanel()" title="إعدادات الأدمن">⚙️</button>
         
         <h3 class="text-center mb-1 text-warning fw-bold pt-2">لوحة تحكم النداء الآلي</h3>
@@ -268,7 +268,7 @@
         });
 
         function startMode(mode) {
-            document.getElementById('roleSelector').style.display, display = 'none';
+            document.getElementById('roleSelector').style.display = 'none';
             if (mode === 'display') {
                 document.getElementById('displayOverlay').style.display = 'flex';
             } else {
@@ -346,12 +346,11 @@
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
                     
-                    // كتابة النص بالطريقة الصوتية المباشرة (بدون إعراب أو حروف ساكنة منفرة) لينطقها المتصفح ككلمة واحدة متصلة طبيعية
                     const spokenText = "يرجو من المراجع " + data.name + " التوجه إلى " + data.clinic;
                     const utterance = new SpeechSynthesisUtterance(spokenText);
                     
                     utterance.lang = 'ar-SA';
-                    utterance.rate = 0.85; // سرعة هادئة وواضحة جداً
+                    utterance.rate = 0.85; 
                     utterance.pitch = 1.0;
                     
                     let bestVoice = getBestNaturalArabicVoice();
