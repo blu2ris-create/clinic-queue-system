@@ -28,7 +28,12 @@
         /* التخطيط الشبكي الثابت للشاشات الكبيرة (عرض الجدول 600 بكسل) */
         .content-grid { display: grid; grid-template-columns: 600px 1fr; gap: 20px; height: calc(100vh - 120px); align-items: center; padding-top: 10px; }
         
-        .sidebar { background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; height: 98%; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        .sidebar-wrapper { display: flex; flex-direction: column; height: 98%; justify-content: flex-start; }
+        
+        /* شريط التاريخ في المنتصف فوق الجدول تماماً */
+        .live-date-banner { text-align: center; color: #38bdf8; font-size: 1.15rem; font-weight: bold; margin-bottom: 8px; background: #111827; border: 1px solid #1f2937; padding: 8px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+        .sidebar { background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; height: calc(100% - 48px); overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
         .archive-title { color: #ffc107; text-align: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #374151; font-weight: bold; font-size: 1.3rem; }
         .table-container { flex-grow: 1; overflow-y: auto; }
         .table-dark-custom { background-color: transparent; color: #ffffff; font-size: 1.15rem; text-align: center; width: 100%; }
@@ -94,21 +99,25 @@
         </div>
 
         <div class="content-grid">
-            <div class="sidebar">
-                <div class="archive-title">📋 آخر النداءات السابقة</div>
-                <div class="table-container">
-                    <table class="table table-dark-custom table-bordered">
-                        <thead>
-                            <tr>
-                                <th>المراجع</th>
-                                <th>العيادة</th>
-                                <th>الوقت</th>
-                            </tr>
-                        </thead>
-                        <tbody id="archiveTableBody">
-                            <tr><td colspan="3" class="text-muted">لا توجد نداءات مسجلة</td></tr>
-                        </tbody>
-                    </table>
+            <div class="sidebar-wrapper">
+                <!-- التاريخ في المنتصف فوق الجدول تماماً -->
+                <div id="liveDateDisplay" class="live-date-banner">--</div>
+                <div class="sidebar">
+                    <div class="archive-title">📋 آخر النداءات السابقة</div>
+                    <div class="table-container">
+                        <table class="table table-dark-custom table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>المراجع</th>
+                                    <th>العيادة</th>
+                                    <th>الوقت</th>
+                                </tr>
+                            </thead>
+                            <tbody id="archiveTableBody">
+                                <tr><td colspan="3" class="text-muted">لا توجد نداءات مسجلة</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -235,9 +244,32 @@
             }
         }
 
+        // تحديث التاريخ التلقائي وفحص التصفير الذكي لليوم الجديد
+        function updateLiveDate() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateString = now.toLocaleDateString('ar-SA', options);
+            const dateKeyString = now.toISOString().split('T')[0]; // صيغة YYYY-MM-DD
+
+            const dateElement = document.getElementById('liveDateDisplay');
+            if (dateElement) {
+                dateElement.innerText = `📅 ${dateString}`;
+            }
+
+            // التصفير التلقائي عند دخول تاريخ يوم جديد
+            let lastSavedDate = localStorage.getItem('umran_system_date');
+            if (lastSavedDate !== dateKeyString) {
+                localStorage.setItem('umran_system_date', dateKeyString);
+                localStorage.setItem('umran_health_archive', JSON.stringify([]));
+                loadArchive();
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             updateClinicsUI();
             loadArchive();
+            updateLiveDate();
+            setInterval(updateLiveDate, 60000); // تحديث دوري للتاريخ
 
             document.addEventListener('fullscreenchange', () => {
                 if (!document.fullscreenElement && isScreenActive) {
@@ -340,7 +372,6 @@
             document.getElementById('mainPatient').innerText = data.name;
             document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
 
-            playRestChime(); // safe fallback or playRealChime
             playRealChime();
 
             setTimeout(() => {
