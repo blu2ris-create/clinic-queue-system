@@ -89,7 +89,7 @@
     <!-- الشاشة الرئيسية لعرض النداءات -->
     <div id="displayScreen" style="display: none;">
         <div class="top-header">
-            <img src="https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/%D8%B4%D8%B9%D8%A7%D8%B1%20%D8%AA%D8%AC%D9%85%D8%B9%20%D8%A7%D9%84%D8%A7%D8%AD%D8%B5%D8%A7%D8%A1%202026.png" alt="شعار تجمع الأحساء الصحي" class="cluster-logo">
+            <img src="https://github.com/blu2ris-create/clinic-queue-system/blob/main/logo.png.png?raw=true" alt="شعار تجمع الأحساء الصحي" class="cluster-logo">
         </div>
 
         <div class="content-grid">
@@ -437,7 +437,7 @@
             if (!clinics.includes(name)) {
                 clinics.push(name);
                 saveClinics(clinics);
-                input.value = '';
+                input.value.trim = '';
             } else {
                 alert('هذه العيادة موجودة مسبقاً');
             }
