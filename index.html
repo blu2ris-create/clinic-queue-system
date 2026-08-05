@@ -194,6 +194,10 @@
         let callQueue = [];
         let isAdminLoggedIn = false;
 
+        // تهيئة ملف الصوت الخاص بنغمة المطار المرفوعة من مستودعك
+        const airportChimeSound = new Audio('https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/mixkit-melodic-airport-announcement-ding-1570.mp3');
+        airportChimeSound.volume = 1.0; // أعلى صوت ممكن
+
         const defaultClinics = [
             "عيادة طب الأسرة رقم 1",
             "عيادة الأسنان رقم 1",
@@ -277,46 +281,14 @@
             document.getElementById('displayOverlay').style.display = 'none';
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
-            playAirportChime3Times();
+            playRealChime();
         }
 
-        // دالة نغمة المطار المحدثة: صوت أعلى، أبطأ، ومكررة 3 مرات (تن تن .. تن تن .. تن تن)
-        function playAirportChime3Times() {
+        // دالة تشغيل ملف الصوت الخاص بك من المستودع
+        function playRealChime() {
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                
-                function playSingleChime(startTime) {
-                    // النغمة الأولى (الأعلى)
-                    const osc1 = audioCtx.createOscillator();
-                    const gain1 = audioCtx.createGain();
-                    osc1.type = 'sine';
-                    osc1.frequency.setValueAtTime(659.25, startTime);
-                    gain1.gain.setValueAtTime(0.5, startTime); // رفع مستوى الصوت بوضوح
-                    gain1.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5); // وقت أطول لتصبح أبطأ وأعمق
-                    osc1.connect(gain1);
-                    gain1.connect(audioCtx.destination);
-                    osc1.start(startTime);
-                    osc1.stop(startTime + 0.5);
-
-                    // النغمة الثانية (الأخفض قليلاً لتعطاء نغمة تن-تن)
-                    const osc2 = audioCtx.createOscillator();
-                    const gain2 = audioCtx.createGain();
-                    osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(523.25, startTime + 0.35);
-                    gain2.gain.setValueAtTime(0.5, startTime + 0.35);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, startTime + 0.9);
-                    osc2.connect(gain2);
-                    gain2.connect(audioCtx.destination);
-                    osc2.start(startTime + 0.35);
-                    osc2.stop(startTime + 0.9);
-                }
-
-                let now = audioCtx.currentTime;
-                // التكرار 3 مرات مع فاصل زمني هادئ ومناسب (مثل المطارات)
-                playSingleChime(now);
-                playSingleChime(now + 1.2);
-                playSingleChime(now + 2.4);
-
+                airportChimeSound.currentTime = 0;
+                airportChimeSound.play().catch(e => {});
             } catch(e) {}
         }
 
@@ -356,10 +328,10 @@
             document.getElementById('mainPatient').innerText = data.name;
             document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
 
-            // تشغيل النغمة الثلاثية للمطار قبل النداء الصوتي
-            playAirportChime3Times();
+            // تشغيل النغمة الحقيقية التي رفعتها
+            playRealChime();
 
-            // الانتظار حتى تنتهي النغمات الثلاث (حوالي 3.3 ثانية) ثم يبدأ نطق الصوت
+            // الانتظار قليلاً لكي تأخذ النغمة مداها ثم يبدأ النداء الصوتي
             setTimeout(() => {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
@@ -390,7 +362,7 @@
                         processQueue();
                     }, 4000);
                 }
-            }, 3300);
+            }, 2500);
 
             saveToArchive(data);
         }
