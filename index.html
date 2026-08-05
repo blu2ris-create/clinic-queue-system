@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: #0b0f19; color: white; font-family: 'Cairo', sans-serif; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        body { background-color: #0b0f19; color: white; font-family: 'Cairo', sans-serif; height: 100vh; width: 100vw; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         
         #roleSelector { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0f19; z-index: 10000; display: flex; justify-content: center; align-items: center; padding: 15px; }
         .mode-card { background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 30px; text-align: center; max-width: 480px; width: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
@@ -15,68 +15,65 @@
         
         #displayOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7, 10, 17, 0.95); z-index: 9999; display: none; justify-content: center; align-items: center; flex-direction: column; padding: 15px; }
         
-        #fullscreenBtn { position: fixed; bottom: 15px; left: 15px; z-index: 9998; display: none; background: #ffc107; color: #0b0f19; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.4); cursor: pointer; font-size: 0.9rem; }
+        #fullscreenBtn { position: fixed; bottom: 10px; left: 10px; z-index: 9998; display: none; background: #ffc107; color: #0b0f19; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.4); cursor: pointer; font-size: 0.85rem; }
 
-        /* الشاشة الرئيسية لعرض النداءات متجاوبة كلياً للجوال والشاشات الكبيرة */
-        #displayScreen { display: none; width: 100vw; min-height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 10; padding: 10px 15px; flex-direction: column; justify-content: space-between; overflow-y: auto; }
+        /* شاشة عرض النداءات ثابتة بالكامل وتتناسب مع كافة الشاشات والجوالات بدون أي نزول أو فراغ */
+        #displayScreen { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 10; padding: 8px 12px; flex-direction: column; justify-content: space-between; overflow: hidden; }
 
-        .top-header { display: flex; justify-content: flex-end; align-items: center; width: 100%; padding-bottom: 6px; border-bottom: 2px solid #1e293b; margin-bottom: 10px; }
-        
-        /* شعار التجمع الرسمي */
-        .cluster-logo { height: 75px; width: auto; object-fit: contain; background: transparent; }
+        .top-header { display: flex; justify-content: flex-end; align-items: center; width: 100%; height: 50px; border-bottom: 2px solid #1e293b; padding-bottom: 4px; }
+        .cluster-logo { height: 45px; width: auto; object-fit: contain; background: transparent; }
         @media (min-width: 992px) {
-            .cluster-logo { height: 110px; }
+            .cluster-logo { height: 75px; }
+            .top-header { height: 85px; }
         }
 
-        /* التخطيط الشبكي المتجاوب */
-        .content-grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding-bottom: 10px; }
+        /* تنسيق الشبكة المتجاوبة بالكامل لجميع الأجهزة */
+        .content-grid { display: grid; grid-template-columns: 1fr; gap: 8px; height: calc(100vh - 65px); align-items: center; }
         @media (min-width: 992px) {
-            .content-grid { grid-template-columns: 600px 1fr; height: calc(100vh - 140px); overflow: hidden; align-items: center; }
+            .content-grid { grid-template-columns: 550px 1fr; gap: 20px; height: calc(100vh - 100px); }
         }
         
-        .sidebar-wrapper { display: flex; flex-direction: column; height: 100%; justify-content: flex-start; }
-        
-        /* شريط التاريخ في المنتصف فوق الجدول تماماً */
-        .live-date-banner { text-align: center; color: #38bdf8; font-size: 1.05rem; font-weight: bold; margin-bottom: 6px; background: #111827; border: 1px solid #1f2937; padding: 8px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .sidebar-wrapper { display: flex; flex-direction: column; height: 100%; justify-content: center; }
+        .live-date-banner { text-align: center; color: #38bdf8; font-size: 0.95rem; font-weight: bold; margin-bottom: 4px; background: #111827; border: 1px solid #1f2937; padding: 6px; border-radius: 10px; }
 
-        .sidebar { background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 15px; display: flex; flex-direction: column; max-height: 350px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        .sidebar { background-color: #111827; border: 1px solid #1f2937; border-radius: 15px; padding: 10px; display: flex; flex-direction: column; height: 45vh; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
         @media (min-width: 992px) {
-            .sidebar { max-height: none; height: calc(100% - 45px); }
+            .sidebar { height: 85vh; }
         }
 
-        .archive-title { color: #ffc107; text-align: center; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #374151; font-weight: bold; font-size: 1.2rem; }
+        .archive-title { color: #ffc107; text-align: center; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #374151; font-weight: bold; font-size: 1.1rem; }
         .table-container { flex-grow: 1; overflow-y: auto; }
-        .table-dark-custom { background-color: transparent; color: #ffffff; font-size: 1.05rem; text-align: center; width: 100%; }
-        .table-dark-custom th { background-color: #1f2937; color: #38bdf8; position: sticky; top: 0; z-index: 2; padding: 10px 8px; font-size: 1.1rem; }
-        .table-dark-custom td { background-color: #151c2c; color: #f3f4f6; border-bottom: 1px solid #1f2937; vertical-align: middle; padding: 12px 8px; }
+        .table-dark-custom { background-color: transparent; color: #ffffff; font-size: 0.95rem; text-align: center; width: 100%; }
+        .table-dark-custom th { background-color: #1f2937; color: #38bdf8; position: sticky; top: 0; z-index: 2; padding: 8px 4px; font-size: 1rem; }
+        .table-dark-custom td { background-color: #151c2c; color: #f3f4f6; border-bottom: 1px solid #1f2937; vertical-align: middle; padding: 8px 4px; }
 
-        .main-area { background: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; justify-content: space-around; align-items: center; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); min-height: 380px; }
+        .main-area { background: #111827; border: 1px solid #1f2937; border-radius: 15px; padding: 10px; height: 48vh; display: flex; flex-direction: column; justify-content: space-around; align-items: center; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
         @media (min-width: 992px) {
-            .main-area { height: 98%; }
+            .main-area { height: 85vh; padding: 20px; }
         }
         
-        .middle-header { text-align: center; margin-bottom: 5px; }
-        .middle-header .main-title { font-size: 2.2rem; font-weight: bold; color: #ffffff; line-height: 1.1; margin-bottom: 2px; }
+        .middle-header { text-align: center; }
+        .middle-header .main-title { font-size: 1.8rem; font-weight: bold; color: #ffffff; line-height: 1.1; margin-bottom: 2px; }
         @media (min-width: 992px) {
-            .middle-header .main-title { font-size: 2.8rem; }
+            .middle-header .main-title { font-size: 2.5rem; }
         }
-        .middle-header .sub-title { font-size: 1.15rem; color: #38bdf8; font-weight: bold; }
+        .middle-header .sub-title { font-size: 1rem; color: #38bdf8; font-weight: bold; }
         @media (min-width: 992px) {
-            .middle-header .sub-title { font-size: 1.35rem; }
+            .middle-header .sub-title { font-size: 1.25rem; }
         }
 
-        .display-box { background: #151c2c; border: 2px solid #334155; border-radius: 25px; padding: 25px 20px; text-align: center; width: 100%; max-width: 780px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); margin: 10px 0; }
-        .display-number { font-size: 4.5rem; font-weight: bold; color: #ffc107; margin-bottom: 8px; line-height: 1.1; word-break: break-all; }
+        .display-box { background: #151c2c; border: 2px solid #334155; border-radius: 20px; padding: 15px 10px; text-align: center; width: 100%; max-width: 720px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
+        .display-number { font-size: 3.5rem; font-weight: bold; color: #ffc107; margin-bottom: 5px; line-height: 1.1; word-break: break-all; }
         @media (min-width: 768px) {
-            .display-number { font-size: 6.5rem; }
+            .display-number { font-size: 5.5rem; }
         }
-        .display-text { font-size: 1.6rem; color: #e2e8f0; font-weight: bold; }
+        .display-text { font-size: 1.3rem; color: #e2e8f0; font-weight: bold; }
         @media (min-width: 768px) {
-            .display-text { font-size: 2.2rem; }
+            .display-text { font-size: 1.8rem; }
         }
 
         /* لوحة التحكم للإستقبال */
-        #controlScreen { display: none; width: 100%; max-width: 550px; background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); position: relative; z-index: 100; margin: 20px auto; overflow-y: auto; }
+        #controlScreen { display: none; width: 100%; max-width: 550px; background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); position: relative; z-index: 100; margin: 20px auto; }
         .form-control, .form-select { background-color: #0b0f19; border: 1px solid #334155; color: white; padding: 12px; border-radius: 10px; text-align: center; font-size: 1.1rem; }
         .form-control:focus, .form-select:focus { background-color: #0b0f19; border-color: #ffc107; color: white; box-shadow: 0 0 10px rgba(255,193,7,0.3); }
         .form-label { color: #38bdf8; font-weight: bold; margin-bottom: 8px; display: block; text-align: right; }
@@ -89,9 +86,13 @@
         
         #adminPanel { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #334155; background: #0f172a; padding: 15px; border-radius: 12px; }
         
-        .clinics-scroll-box { max-height: 180px; overflow-y: auto; border: 1px solid #334155; padding: 10px; border-radius: 8px; background: #0b0f19; }
+        .clinics-scroll-box { max-height: 150px; overflow-y: auto; border: 1px solid #334155; padding: 10px; border-radius: 8px; background: #0b0f19; }
         .clinic-tag { display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; padding: 6px 12px; border-radius: 8px; margin: 4px; font-size: 0.9rem; color: #f8fafc; }
         .clinic-tag button { background: none; border: none; color: #ef4444; margin-right: 8px; font-weight: bold; cursor: pointer; }
+
+        /* نافذة التحذير الداخلية الخاصة بالبرنامج */
+        #customResetModal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.75); z-index: 20000; display: none; justify-content: center; align-items: center; padding: 15px; }
+        .modal-content-custom { background: #151c2c; border: 2px solid #ffc107; border-radius: 20px; padding: 25px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.8); }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -99,6 +100,18 @@
 <body>
 
     <button id="fullscreenBtn" onclick="requestFullscreen()">📺 ملء الشاشة</button>
+
+    <!-- نافذة التحذير الداخلية لتصفير الجدول -->
+    <div id="customResetModal">
+        <div class="modal-content-custom">
+            <h4 class="text-warning fw-bold mb-3">⚠️ تنبيه هام</h4>
+            <p class="text-light mb-4">هل أنت متأكد من رغبتك في مسح جدول النداءات وتصفيره بالكامل لجميع الشاشات؟</p>
+            <div class="d-flex gap-2">
+                <button class="btn btn-secondary w-50 fw-bold py-2" onclick="closeResetModal()">إلغاء</button>
+                <button class="btn btn-danger w-50 fw-bold py-2" onclick="confirmResetArchive()">تصفير الآن</button>
+            </div>
+        </div>
+    </div>
 
     <div id="roleSelector">
         <div class="mode-card">
@@ -125,7 +138,6 @@
 
         <div class="content-grid">
             <div class="sidebar-wrapper">
-                <!-- التاريخ في المنتصف فوق جدول النداءات السابقة -->
                 <div id="liveDateDisplay" class="live-date-banner">--</div>
                 <div class="sidebar">
                     <div class="archive-title">📋 آخر النداءات السابقة</div>
@@ -192,10 +204,9 @@
                 </div>
             </div>
             <div id="adminActionsSection" style="display: none;">
-                <!-- زر تصفير جدول النداءات -->
                 <div class="mb-3">
                     <label class="form-label small text-warning">تصفير جدول النداءات:</label>
-                    <button class="btn btn-danger w-100 fw-bold" onclick="manualResetArchive()">🗑️ مسح وتصفير جدول النداءات السابقة</button>
+                    <button class="btn btn-danger w-100 fw-bold" onclick="openResetModal()">🗑️ مسح وتصفير جدول النداءات السابقة</button>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small">إضافة عيادة جديدة:</label>
@@ -274,7 +285,6 @@
             }
         }
 
-        // تحديث التاريخ الحالي تلقائياً وفحص التصفير التلقائي لليوم الجديد
         function updateLiveDate() {
             const now = new Date();
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -319,11 +329,19 @@
         });
 
         client.on('message', (topic, message) => {
-            if (topic === uniqueTopic && isScreenActive) {
+            if (topic === uniqueTopic) {
                 try {
                     const data = JSON.parse(message.toString());
-                    callQueue.push(data);
-                    processQueue();
+                    
+                    if (data.type === 'RESET_ARCHIVE') {
+                        localStorage.setItem('umran_health_archive', JSON.stringify([]));
+                        loadArchive();
+                        document.getElementById('mainPatient').innerText = '--';
+                        document.getElementById('mainClinic').innerText = 'في انتظار النداء الأول...';
+                    } else if (isScreenActive) {
+                        callQueue.push(data);
+                        processQueue();
+                    }
                 } catch (e) {}
             }
         });
@@ -364,6 +382,7 @@
             }
 
             const callData = {
+                type: 'CALL',
                 id: Date.now(),
                 name: name,
                 clinic: clinic
@@ -449,7 +468,7 @@
             if (archive.length > 10) archive.pop();
 
             localStorage.setItem('umran_health_archive', JSON.stringify(archive));
-            renderArchive(archive);
+            loadArchive();
         }
 
         function loadArchive() {
@@ -459,6 +478,7 @@
 
         function renderArchive(archive) {
             const tbody = document.getElementById('archiveTableBody');
+            if (!tbody) return;
             if (archive.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="3" class="text-muted">لا توجد نداءات مسجلة</td></tr>`;
                 return;
@@ -472,18 +492,18 @@
             `).join('');
         }
 
-        // تصفير فوري وتحديث الشاشة بدون الحاجة لإعادة تحميل الصفحة
-        function manualResetArchive() {
-            if (confirm('تنبيه: هل أنت متأكد من رغبتك في مسح جدول النداءات السابقة وتصفيره بالكامل؟')) {
-                localStorage.setItem('umran_health_archive', JSON.stringify([]));
-                loadArchive();
-                
-                // تحديث الشاشة الرئيسية فورياً في حال كانت مفتوحة بنفس المتصفح
-                const tbody = document.getElementById('archiveTableBody');
-                if (tbody) {
-                    tbody.innerHTML = `<tr><td colspan="3" class="text-muted">لا توجد نداءات مسجلة</td></tr>`;
-                }
-            }
+        function openResetModal() {
+            document.getElementById('customResetModal').style.display = 'flex';
+        }
+
+        function closeResetModal() {
+            document.getElementById('customResetModal').style.display = 'none';
+        }
+
+        function confirmResetArchive() {
+            closeResetModal();
+            const resetCommand = { type: 'RESET_ARCHIVE' };
+            client.publish(uniqueTopic, JSON.stringify(resetCommand));
         }
 
         function toggleAdminPanel() {
