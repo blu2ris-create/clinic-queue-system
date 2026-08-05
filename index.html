@@ -21,7 +21,7 @@
         #displayScreen { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 10; padding: 15px 25px; flex-direction: column; justify-content: space-between; overflow: hidden; }
 
         .top-header { display: flex; justify-content: flex-end; align-items: center; width: 100%; padding-bottom: 8px; border-bottom: 2px solid #1e293b; }
-        .cluster-badge { border: 1.5px solid #38bdf8; color: #38bdf8; padding: 6px 16px; border-radius: 10px; font-weight: bold; font-size: 1rem; background: #111827; }
+        .cluster-logo { height: 50px; width: auto; object-fit: contain; background: #111827; padding: 4px 12px; border-radius: 10px; border: 1.5px solid #38bdf8; }
 
         .content-grid { display: grid; grid-template-columns: 580px 1fr; gap: 20px; height: calc(100vh - 80px); align-items: center; padding-top: 5px; }
         
@@ -89,7 +89,7 @@
     <!-- الشاشة الرئيسية لعرض النداءات -->
     <div id="displayScreen" style="display: none;">
         <div class="top-header">
-            <div class="cluster-badge">تجمع الأحساء الصحي</div>
+            <img src="https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/%D8%B4%D8%B9%D8%A7%D8%B1%20%D8%AA%D8%AC%D9%85%D8%B9%20%D8%A7%D9%84%D8%A7%D8%AD%D8%B5%D8%A7%D8%A1%202026.png" alt="شعار تجمع الأحساء الصحي" class="cluster-logo">
         </div>
 
         <div class="content-grid">
@@ -194,9 +194,8 @@
         let callQueue = [];
         let isAdminLoggedIn = false;
 
-        // تهيئة ملف الصوت الخاص بنغمة المطار المرفوعة من مستودعك
         const airportChimeSound = new Audio('https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/mixkit-melodic-airport-announcement-ding-1570.mp3');
-        airportChimeSound.volume = 1.0; // أعلى صوت ممكن
+        airportChimeSound.volume = 1.0;
 
         const defaultClinics = [
             "عيادة طب الأسرة رقم 1",
@@ -284,7 +283,6 @@
             playRealChime();
         }
 
-        // دالة تشغيل ملف الصوت الخاص بك من المستودع
         function playRealChime() {
             try {
                 airportChimeSound.currentTime = 0;
@@ -328,10 +326,8 @@
             document.getElementById('mainPatient').innerText = data.name;
             document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
 
-            // تشغيل النغمة الحقيقية التي رفعتها
             playRealChime();
 
-            // الانتظار قليلاً لكي تأخذ النغمة مداها ثم يبدأ النداء الصوتي
             setTimeout(() => {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
