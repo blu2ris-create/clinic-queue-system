@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متابعة النداء الآلي - المراجع</title>
+    <!-- استدعاء مكتبة MQTT للاتصال اللحظي بالنظام -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            color: #333;
+        }
+        /* الهيدر العلوي */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .center-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #006643;
+            text-align: center;
+            flex-grow: 1;
+        }
+        .logo-container img {
+            height: 45px;
+        }
+        /* المحتوى الرئيسي */
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+        }
+        /* شاشة إدخال الرقم */
+        #login-screen {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 350px;
+        }
+        #login-screen input {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        #login-screen button {
+            width: 100%;
+            padding: 12px;
+            background-color: #006643;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #login-screen button:hover {
+            background-color: #004d32;
+        }
+        /* شاشة الانتظار */
+        #waiting-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+        .msg-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #006643;
+            margin-bottom: 15px;
+        }
+        .msg-sub {
+            font-size: 1.2rem;
+            color: #666;
+            background: #e8f5e9;
+            padding: 15px 25px;
+            border-radius: 50px;
+            border: 1px dashed #a5d6a7;
+        }
+        .my-number-display {
+            margin-top: 25px;
+            font-size: 1.1rem;
+            color: #888;
+        }
+        .my-number-display span {
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* شاشة النداء (وميض واهتزاز) */
+        #calling-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffeb3b;
+            z-index: 9999;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .call-alert-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #d32f2f;
+            margin-bottom: 10px;
+        }
+        .called-number {
+            font-size: 5rem;
+            font-weight: bold;
+            color: #000;
+            background: white;
+            padding: 20px 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            margin: 20px 0;
+        }
+        .stop-btn {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .stop-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* تأثير الوميض (تغيير لون الخلفية) */
+        @keyframes flashBg {
+            0% { background-color: #ffeb3b; }
+            50% { background-color: #ff5722; color: white; }
+            100% { background-color: #ffeb3b; }
+        }
+        .flashing {
+            animation: flashBg 0.6s infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الهيدر العلوي -->
+    <header>
+        <!-- اسم المركز الصحي في المنتصف -->
+        <div class="center-name">مركز صحي العمران</div>
+        <!-- شعار تجمع الأحساء الصحي في أقصى اليسار -->
+        <div class="logo-container">
+            <img src="https://i.ibb.co/3m3v92z/Al-Ahsa-Health-Cluster-Logo.png" alt="شعار تجمع الأحساء الصحي">
+            <!-- ملاحظة: إذا كان شعار محلي بملفك تقدر تحط اسمه هنا، وضعت لك رابط شعار رمزي كمثال -->
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-container">
+
+        <!-- 1. شاشة تسجيل الرقم عند فتح الباركود -->
+        <div id="login-screen">
+            <h3 style="margin-top:0; color:#333;">أهلاً بك</h3>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">الرجاء إدخال رقم الانتظار الذي سلمك إياه الموظف</p>
+            <input type="text" id="patient-input-num" placeholder="مثال: A-012 أو 15">
+            <button onclick="startWaiting()">متابعة دوري</button>
+        </div>
+
+        <!-- 2. شاشة الانتظار الهادئة -->
+        <div id="waiting-screen">
+            <div class="msg-title">اسم الله عليك ماتشوف شر</div>
+            <div class="msg-sub">اشغل وقتك بالدعاء لين ما يجي دورك</div>
+            <div class="my-number-display">رقمك المسجل: <span id="display-my-num">---</span></div>
+        </div>
+
+    </div>
+
+    <!-- 3. شاشة النداء والوميض التلقائي -->
+    <div id="calling-screen" id="alert-box">
+        <div class="call-alert-title">حان دورك الآن! 🔔</div>
+        <div style="font-size: 1.2rem; color: #333; font-weight: bold;">الرجاء التوجه إلى العيادة / الكاونتر</div>
+        <div class="called-number" id="alert-num-box">---</div>
+        <button class="stop-btn" onclick="stopAlert()">تم الانتباه (إيقاف التنبيه)</button>
+    </div>
+
+    <script>
+        let myNumber = "";
+        let vibrateInterval = null;
+        let client = null;
+
+        // إعداد الاتصال بنظام MQTT (نفس بروكتر النظام لديك)
+        const brokerUrl = 'wss://test.mosquitto.org:8081/mqtt'; // استبدله بنفس بروكتر نظامك الأساسي إن وجد
+        const topicName = 'health/center/queue/call'; // نفس قناة النداء لديك
+
+        function startWaiting() {
+            const inputVal = document.getElementById('patient-input-num').value.trim();
+            if(!inputVal) {
+                alert('الرجاء إدخال الرقم بشكل صحيح');
+                return;
+            }
+            myNumber = inputVal;
+            document.getElementById('display-my-num').innerText = myNumber;
+            
+            // إخفاء شاشة التسجيل وإظهار شاشة الانتظار
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('waiting-screen').style.display = 'flex';
+
+            // الاتصال بنظام المراسلة الفورية
+            connectMqtt();
+        }
+
+        function connectMqtt() {
+            client = mqtt.connect(brokerUrl);
+            client.on('connect', function () {
+                console.log('Connected to MQTT for Patient View');
+                client.subscribe(topicName);
+            });
+
+            client.on('message', function (topic, message) {
+                try {
+                    const data = JSON.parse(message.toString());
+                    // التحقق إذا كان الرقم المُنادَى عليه يطابق رقم هذا المراجع
+                    if (data.number && data.number.toString().trim() === myNumber.toString().trim()) {
+                        triggerCallAlert(myNumber);
+                    }
+                } catch(e) {
+                    // إذا كانت الرسالة نصية عادية للرقم مباشرة
+                    if (message.toString().trim() === myNumber.toString().trim()) {
+                        triggerCallAlert(myNumber);
+                    }
+                }
+            });
+        }
+
+        function triggerCallAlert(num) {
+            document.getElementById('alert-num-box').innerText = num;
+            const callScreen = document.getElementById('calling-screen');
+            callScreen.style.display = 'flex';
+            callScreen.classList.add('flashing');
+
+            // بدء الاهتزاز المتكرر المتلاحق
+            if ("vibrate" in navigator) {
+                // يهتز لمدة ثانية ويقف نصف ثانية بشكل متكرر
+                vibrateInterval = setInterval(() => {
+                    navigator.vibrate([1000, 500, 1000, 500]);
+                }, 2000);
+            }
+        }
+
+        function stopAlert() {
+            // إيقاف الاهتزاز
+            if ("vibrate" in navigator) {
+                navigator.vibrate(0);
+            }
+            if (vibrateInterval) {
+                clearInterval(vibrateInterval);
+            }
+            // إخفاء شاشة النداء الصاخب
+            const callScreen = document.getElementById('calling-screen');
+            callScreen.style.display = 'none';
+            callScreen.classList.remove('flashing');
+        }
+    </script>
+</body>
+</html>
