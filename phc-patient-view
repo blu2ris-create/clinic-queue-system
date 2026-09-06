@@ -172,11 +172,10 @@
     <!-- الهيدر العلوي -->
     <header>
         <!-- اسم المركز الصحي في المنتصف -->
-        <div class="center-name">مركز صحي العمران</div>
+        <div class="center-name">مركز صحي الصالحية</div>
         <!-- شعار تجمع الأحساء الصحي في أقصى اليسار -->
         <div class="logo-container">
             <img src="https://i.ibb.co/3m3v92z/Al-Ahsa-Health-Cluster-Logo.png" alt="شعار تجمع الأحساء الصحي">
-            <!-- ملاحظة: إذا كان شعار محلي بملفك تقدر تحط اسمه هنا، وضعت لك رابط شعار رمزي كمثال -->
         </div>
     </header>
 
@@ -201,7 +200,7 @@
     </div>
 
     <!-- 3. شاشة النداء والوميض التلقائي -->
-    <div id="calling-screen" id="alert-box">
+    <div id="calling-screen">
         <div class="call-alert-title">حان دورك الآن! 🔔</div>
         <div style="font-size: 1.2rem; color: #333; font-weight: bold;">الرجاء التوجه إلى العيادة / الكاونتر</div>
         <div class="called-number" id="alert-num-box">---</div>
@@ -214,8 +213,8 @@
         let client = null;
 
         // إعداد الاتصال بنظام MQTT (نفس بروكتر النظام لديك)
-        const brokerUrl = 'wss://test.mosquitto.org:8081/mqtt'; // استبدله بنفس بروكتر نظامك الأساسي إن وجد
-        const topicName = 'health/center/queue/call'; // نفس قناة النداء لديك
+        const brokerUrl = 'wss://test.mosquitto.org:8081/mqtt'; 
+        const topicName = 'health/center/queue/call'; 
 
         function startWaiting() {
             const inputVal = document.getElementById('patient-input-num').value.trim();
@@ -249,7 +248,6 @@
                         triggerCallAlert(myNumber);
                     }
                 } catch(e) {
-                    // إذا كانت الرسالة نصية عادية للرقم مباشرة
                     if (message.toString().trim() === myNumber.toString().trim()) {
                         triggerCallAlert(myNumber);
                     }
@@ -265,7 +263,6 @@
 
             // بدء الاهتزاز المتكرر المتلاحق
             if ("vibrate" in navigator) {
-                // يهتز لمدة ثانية ويقف نصف ثانية بشكل متكرر
                 vibrateInterval = setInterval(() => {
                     navigator.vibrate([1000, 500, 1000, 500]);
                 }, 2000);
@@ -273,14 +270,12 @@
         }
 
         function stopAlert() {
-            // إيقاف الاهتزاز
             if ("vibrate" in navigator) {
                 navigator.vibrate(0);
             }
             if (vibrateInterval) {
                 clearInterval(vibrateInterval);
             }
-            // إخفاء شاشة النداء الصاخب
             const callScreen = document.getElementById('calling-screen');
             callScreen.style.display = 'none';
             callScreen.classList.remove('flashing');
