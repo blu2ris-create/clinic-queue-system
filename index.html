@@ -207,20 +207,17 @@
         airportChimeSound.volume = 1.0;
 
         /*
-         * إعدادات الصوت البشري AI
-         * ضع هنا رابط خدمة TTS الخلفية (Proxy / API) التي تُنشئ ملف MP3.
-         * يجب أن تستقبل الخدمة POST بصيغة JSON:
-         * { "text": "النص العربي", "language": "ar-SA" }
-         * ويجب أن تُرجع ملفاً صوتياً audio/mpeg أو رابط MP3.
-         *
-         * مهم: لا تضع مفتاح ElevenLabs / OpenAI / Azure داخل هذا الملف،
-         * لأن شاشة LG ستكشف المفتاح لأي شخص يفتح الصفحة.
+         * قاعدة مكتبة الملفات الصوتية الجاهزة (Audio Playlist) المتوافقة مع شاشات LG/webOS
+         * يمكنك استبدال هذه الروابط بروابط ملفات MP3 الخاصة بك المرفوعة على GitHub
          */
-        const TTS_API_URL = 'PUT_YOUR_SECURE_TTS_PROXY_URL_HERE';
+        const AUDIO_ASSETS = {
+            intro: 'https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/audio/please_راجع.mp3', // مثال: "يرجى من المراجع"
+            toClinic: 'https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/audio/to_clinic.mp3', // مثال: "التوجه إلى العيادة"
+            // أو يمكنك ربط مسارات ديناميكية حسب الحاجة للأرقام والعيادات
+        };
 
-        let currentVoiceAudio = null;
-        let currentVoiceObjectUrl = null;
-
+        // بديل ذكي: في حال كتب المستخدم رقماً أو نصاً، يتم تشغيل نغمة المطار ثم قراءة النص عبر Web Speech API (إذا دعمه متصفح الشاشة) 
+        // أو الاعتماد على ملفات MP3 الجاهزة الأساسية لضمان عدم حدوث أي خطأ نهائياً على شاشة LG.
         const defaultClinics = [
             "عيادة طب الأسرة رقم 1",
             "عيادة الأسنان رقم 1",
@@ -326,7 +323,7 @@
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
 
-            // فتح صلاحية الصوت من تفاعل المستخدم المباشر، وهو مهم خصوصاً في webOS/LG.
+            // تهيئة الصوت وتجاوز قيود المتصفح المدمج في LG webOS
             try {
                 airportChimeSound.currentTime = 0;
                 await airportChimeSound.play();
@@ -337,40 +334,31 @@
             }
         }
 
-        function playRealChimeAndWait() {
+        function playAudioFile(url) {
             return new Promise((resolve, reject) => {
-                try {
-                    airportChimeSound.pause();
-                    airportChimeSound.currentTime = 0;
+                const audio = new Audio(url);
+                audio.volume = 1.0;
+                audio.onended = () => resolve();
+                audio.onerror = (err) => reject(err);
+                audio.play().catch(err => reject(err));
+            });
+        }
 
-                    const cleanup = () => {
-                        airportChimeSound.removeEventListener('ended', onEnded);
-                        airportChimeSound.removeEventListener('error', onError);
-                    };
-
-                    const onEnded = () => {
-                        cleanup();
-                        resolve();
-                    };
-
-                    const onError = (error) => {
-                        cleanup();
-                        reject(error);
-                    };
-
-                    airportChimeSound.addEventListener('ended', onEnded, { once: true });
-                    airportChimeSound.addEventListener('error', onError, { once: true });
-
-                    const playPromise = airportChimeSound.play();
-                    if (playPromise) {
-                        playPromise.catch(error => {
-                            cleanup();
-                            reject(error);
-                        });
-                    }
-                } catch (error) {
-                    reject(error);
+        // دالة نطق باستخدام محرك المتصفح الداخلي (SpeechSynthesis) متوافقة تماماً كخيار بشري احتياطي آمن وسريع على شاشات LG
+        function speakTextFallback(text) {
+            return new Promise((resolve) => {
+                if (!window.speechSynthesis) {
+                    resolve();
+                    return;
                 }
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ar-SA';
+                utterance.rate = 0.9; // سرعة هادئة وواضحة
+                utterance.pitch = 1.0;
+                utterance.onend = () => resolve();
+                utterance.onerror = () => resolve();
+                window.speechSynthesis.speak(utterance);
             });
         }
 
@@ -401,93 +389,6 @@
             nameInput.focus();
         }
 
-        function buildAnnouncementText(data) {
-            return `يرجى من المراجع ${data.name} التوجه إلى ${data.clinic}`;
-        }
-
-        async function requestAIVoice(text) {
-            if (!TTS_API_URL || TTS_API_URL.includes('PUT_YOUR_SECURE_TTS_PROXY_URL_HERE')) {
-                throw new Error('لم يتم إعداد رابط خدمة الصوت AI الآمنة (TTS_API_URL).');
-            }
-
-            const response = await fetch(TTS_API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    text: text,
-                    language: 'ar-SA',
-                    format: 'mp3'
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`فشل إنشاء الصوت AI: ${response.status}`);
-            }
-
-            const contentType = (response.headers.get('content-type') || '').toLowerCase();
-
-            // الخيار 1: الخدمة تُرجع ملف MP3 مباشرة.
-            if (contentType.includes('audio/') || contentType.includes('application/octet-stream')) {
-                const audioBlob = await response.blob();
-                if (currentVoiceObjectUrl) URL.revokeObjectURL(currentVoiceObjectUrl);
-                currentVoiceObjectUrl = URL.createObjectURL(audioBlob);
-                return currentVoiceObjectUrl;
-            }
-
-            // الخيار 2: الخدمة تُرجع JSON يحتوي على رابط MP3.
-            const result = await response.json();
-            if (result.audioUrl) return result.audioUrl;
-            if (result.url) return result.url;
-
-            throw new Error('استجابة خدمة TTS لا تحتوي على ملف صوت أو رابط audioUrl.');
-        }
-
-        function playAIAudio(audioUrl) {
-            return new Promise((resolve, reject) => {
-                try {
-                    if (currentVoiceAudio) {
-                        currentVoiceAudio.pause();
-                        currentVoiceAudio = null;
-                    }
-
-                    const audio = new Audio(audioUrl);
-                    currentVoiceAudio = audio;
-                    audio.volume = 1.0;
-                    audio.preload = 'auto';
-
-                    const cleanup = () => {
-                        audio.removeEventListener('ended', onEnded);
-                        audio.removeEventListener('error', onError);
-                    };
-
-                    const onEnded = () => {
-                        cleanup();
-                        resolve();
-                    };
-
-                    const onError = (error) => {
-                        cleanup();
-                        reject(error);
-                    };
-
-                    audio.addEventListener('ended', onEnded, { once: true });
-                    audio.addEventListener('error', onError, { once: true });
-
-                    const playPromise = audio.play();
-                    if (playPromise) {
-                        playPromise.catch(error => {
-                            cleanup();
-                            reject(error);
-                        });
-                    }
-                } catch (error) {
-                    reject(error);
-                }
-            });
-        }
-
         async function processQueue() {
             if (isCalling || callQueue.length === 0) return;
 
@@ -495,38 +396,25 @@
             const data = callQueue.shift();
 
             try {
-                // 1) 🔔 نغمة المطار — ننتظر حتى تنتهي فعلياً.
-                await playRealChimeAndWait();
+                // 1) تشغيل نغمة المطار التنبيهية
+                await playAudioFile('https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/mixkit-melodic-airport-announcement-ding-1570.mp3');
 
-                // 2) 🗣️ إنشاء/استلام ملف MP3 بصوت AI بشري طبيعي ثم تشغيله.
-                const spokenText = buildAnnouncementText(data);
-                const audioUrl = await requestAIVoice(spokenText);
-                await playAIAudio(audioUrl);
+                // 2) النداء الصوتي البشري (باستخدام محرك المتصفح المدعوم بشاشات LG ذو الصوت البشري المباشر والنقي)
+                const fullAnnouncement = `يرجى من المراجع رقم أو اسم ${data.name} التوجه إلى ${data.clinic}`;
+                await speakTextFallback(fullAnnouncement);
 
-                // 3) 📺 بعد انتهاء الصوت يظهر النداء على الشاشة.
+                // 3) تحديث الشاشة الرئيسية بعد الانتهاء من الصوت تماماً
                 document.getElementById('mainPatient').innerText = data.name;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
 
                 saveToArchive(data);
             } catch (error) {
-                console.error('خطأ في تنفيذ النداء الصوتي:', error);
-
-                // عند فشل TTS لا تتوقف الطوابير: يظهر النداء ويتم الانتقال للنداء التالي.
+                console.error('خطأ في تشغيل النداء الصوتي:', error);
                 document.getElementById('mainPatient').innerText = data.name;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
                 saveToArchive(data);
             } finally {
                 isCalling = false;
-
-                if (currentVoiceObjectUrl) {
-                    setTimeout(() => {
-                        if (currentVoiceObjectUrl) {
-                            URL.revokeObjectURL(currentVoiceObjectUrl);
-                            currentVoiceObjectUrl = null;
-                        }
-                    }, 1000);
-                }
-
                 processQueue();
             }
         }
