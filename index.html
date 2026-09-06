@@ -17,20 +17,14 @@
         
         #fullscreenBtn { position: fixed; bottom: 10px; left: 10px; z-index: 9998; display: none; background: #ffc107; color: #0b0f19; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.4); cursor: pointer; font-size: 0.85rem; }
 
-        /* الشاشة الرئيسية لعرض النداءات - ثابتة ومتناسقة في جميع الأحوال */
         #displayScreen { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 10; padding: 15px 25px; flex-direction: column; justify-content: space-between; overflow: hidden; }
 
         .top-header { display: flex; justify-content: flex-end; align-items: center; width: 100%; padding-bottom: 8px; border-bottom: 2px solid #1e293b; }
-        
-        /* شعار التجمع بحجمه الأصلي والواضح */
         .cluster-logo { height: 100px; width: auto; object-fit: contain; background: transparent; }
 
-        /* التخطيط الشبكي الثابت: الجدول دائماً على اليمين وصندوق النداء على اليسار بحجم 600 بكسل مخصص للجدول */
         .content-grid { display: grid; grid-template-columns: 600px 1fr; gap: 20px; height: calc(100vh - 130px); align-items: center; padding-top: 10px; }
-        
         .sidebar-wrapper { display: flex; flex-direction: column; height: 98%; justify-content: flex-start; }
         
-        /* شريط التاريخ في المنتصف فوق الجدول تماماً */
         .live-date-banner { text-align: center; color: #38bdf8; font-size: 1.15rem; font-weight: bold; margin-bottom: 8px; background: #111827; border: 1px solid #1f2937; padding: 8px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
         .sidebar { background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; height: calc(100% - 48px); overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
@@ -50,7 +44,6 @@
         .display-number { font-size: 6.5rem; font-weight: bold; color: #ffc107; margin-bottom: 10px; line-height: 1.1; word-break: break-all; }
         .display-text { font-size: 2.2rem; color: #e2e8f0; font-weight: bold; }
 
-        /* لوحة التحكم للإستقبال */
         #controlScreen { display: none; width: 100%; max-width: 550px; background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); position: relative; z-index: 100; margin: 20px auto; overflow-y: auto; }
         .form-control, .form-select { background-color: #0b0f19; border: 1px solid #334155; color: white; padding: 12px; border-radius: 10px; text-align: center; font-size: 1.1rem; }
         .form-control:focus, .form-select:focus { background-color: #0b0f19; border-color: #ffc107; color: white; box-shadow: 0 0 10px rgba(255,193,7,0.3); }
@@ -63,7 +56,6 @@
         .admin-gear-btn:hover { color: #ffc107; border-color: #ffc107; transform: rotate(90deg); }
         
         #adminPanel { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #334155; background: #0f172a; padding: 15px; border-radius: 12px; }
-        
         .clinics-scroll-box { max-height: 180px; overflow-y: auto; border: 1px solid #334155; padding: 10px; border-radius: 8px; background: #0b0f19; }
         .clinic-tag { display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; padding: 6px 12px; border-radius: 8px; margin: 4px; font-size: 0.9rem; color: #f8fafc; }
         .clinic-tag button { background: none; border: none; color: #ef4444; margin-right: 8px; font-weight: bold; cursor: pointer; }
@@ -92,7 +84,6 @@
         </div>
     </div>
 
-    <!-- الشاشة الرئيسية لعرض النداءات -->
     <div id="displayScreen" style="display: none;">
         <div class="top-header">
             <img src="https://github.com/blu2ris-create/clinic-queue-system/blob/main/logo.png%20(2).png?raw=true" alt="الشعار الرسمي" class="cluster-logo">
@@ -134,7 +125,6 @@
         </div>
     </div>
 
-    <!-- لوحة التحكم للإستقبال والأدمن -->
     <div id="controlScreen" style="display: none;">
         <button id="adminToggleBtn" class="admin-gear-btn" onclick="toggleAdminPanel()" title="إعدادات الأدمن">⚙️</button>
         
@@ -206,18 +196,6 @@
         const airportChimeSound = new Audio('https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/mixkit-melodic-airport-announcement-ding-1570.mp3');
         airportChimeSound.volume = 1.0;
 
-        /*
-         * قاعدة مكتبة الملفات الصوتية الجاهزة (Audio Playlist) المتوافقة مع شاشات LG/webOS
-         * يمكنك استبدال هذه الروابط بروابط ملفات MP3 الخاصة بك المرفوعة على GitHub
-         */
-        const AUDIO_ASSETS = {
-            intro: 'https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/audio/please_راجع.mp3', // مثال: "يرجى من المراجع"
-            toClinic: 'https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/audio/to_clinic.mp3', // مثال: "التوجه إلى العيادة"
-            // أو يمكنك ربط مسارات ديناميكية حسب الحاجة للأرقام والعيادات
-        };
-
-        // بديل ذكي: في حال كتب المستخدم رقماً أو نصاً، يتم تشغيل نغمة المطار ثم قراءة النص عبر Web Speech API (إذا دعمه متصفح الشاشة) 
-        // أو الاعتماد على ملفات MP3 الجاهزة الأساسية لضمان عدم حدوث أي خطأ نهائياً على شاشة LG.
         const defaultClinics = [
             "عيادة طب الأسرة رقم 1",
             "عيادة الأسنان رقم 1",
@@ -323,15 +301,13 @@
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
 
-            // تهيئة الصوت وتجاوز قيود المتصفح المدمج في LG webOS
+            // فك قفل الصوتيات على متصفح شاشة LG
             try {
                 airportChimeSound.currentTime = 0;
                 await airportChimeSound.play();
                 airportChimeSound.pause();
                 airportChimeSound.currentTime = 0;
-            } catch (e) {
-                console.warn('تعذر تفعيل الصوت مبدئياً:', e);
-            }
+            } catch (e) {}
         }
 
         function playAudioFile(url) {
@@ -344,20 +320,34 @@
             });
         }
 
-        // دالة نطق باستخدام محرك المتصفح الداخلي (SpeechSynthesis) متوافقة تماماً كخيار بشري احتياطي آمن وسريع على شاشات LG
-        function speakTextFallback(text) {
+        // محرك النطق المحسّن المخصص لشاشات التلفاز الذكية لضمان نطق الأسماء بوضوح
+        function speakTextWebAPI(text) {
             return new Promise((resolve) => {
                 if (!window.speechSynthesis) {
                     resolve();
                     return;
                 }
+                
                 window.speechSynthesis.cancel();
+                
+                // التأكد من تحميل أصوات النظام المتاحة على التلفاز
+                let voices = window.speechSynthesis.getVoices();
+                let arVoice = voices.find(v => v.lang.includes('ar') || v.lang.includes('AR'));
+
                 const utterance = new SpeechSynthesisUtterance(text);
+                if (arVoice) {
+                    utterance.voice = arVoice;
+                }
                 utterance.lang = 'ar-SA';
-                utterance.rate = 0.9; // سرعة هادئة وواضحة
+                utterance.rate = 0.85; // سرعة هادئة ومفهومة جداً داخل المركز الصحي
                 utterance.pitch = 1.0;
+
                 utterance.onend = () => resolve();
                 utterance.onerror = () => resolve();
+
+                // مهلة أمان لضمان عدم تعليق طابور النداء لو تأخر محرك الصوت في الشاشة
+                setTimeout(() => resolve(), 6000);
+
                 window.speechSynthesis.speak(utterance);
             });
         }
@@ -396,20 +386,22 @@
             const data = callQueue.shift();
 
             try {
-                // 1) تشغيل نغمة المطار التنبيهية
+                // 1) تشغيل نغمة التنبيه في المطار أولاً
                 await playAudioFile('https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/mixkit-melodic-airport-announcement-ding-1570.mp3');
+                
+                // فاصل بسيط جداً لنقاء الصوت
+                await new Promise(r => setTimeout(r, 400));
 
-                // 2) النداء الصوتي البشري (باستخدام محرك المتصفح المدعوم بشاشات LG ذو الصوت البشري المباشر والنقي)
-                const fullAnnouncement = `يرجى من المراجع رقم أو اسم ${data.name} التوجه إلى ${data.clinic}`;
-                await speakTextFallback(fullAnnouncement);
+                // 2) نطق النداء بالصوت (يرجى توجه المراجع فلان إلى العيادة كذا)
+                const fullAnnouncement = `يرجى من المراجع رقم أو اسم، ${data.name}، التوجه إلى، ${data.clinic}`;
+                await speakTextWebAPI(fullAnnouncement);
 
-                // 3) تحديث الشاشة الرئيسية بعد الانتهاء من الصوت تماماً
+                // 3) تحديث الشاشة الرئيسية بصرياً
                 document.getElementById('mainPatient').innerText = data.name;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
 
                 saveToArchive(data);
             } catch (error) {
-                console.error('خطأ في تشغيل النداء الصوتي:', error);
                 document.getElementById('mainPatient').innerText = data.name;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
                 saveToArchive(data);
@@ -458,11 +450,9 @@
             if (panel.style.display === 'block') {
                 panel.style.display = 'none';
                 btn.innerText = isAdminLoggedIn ? '✕' : '⚙️';
-                btn.title = isAdminLoggedIn ? 'إغلاق الإعدادات' : 'إعدادات الأدمن';
             } else {
                 panel.style.display = 'block';
                 btn.innerText = '✕';
-                btn.title = 'إغلاق الإعدادات';
             }
         }
 
@@ -474,11 +464,7 @@
                 isAdminLoggedIn = true;
                 document.getElementById('adminLoginSection').style.display = 'none';
                 document.getElementById('adminActionsSection').style.display = 'block';
-                
-                const btn = document.getElementById('adminToggleBtn');
-                btn.innerText = '✕';
-                btn.title = 'إغلاق الإعدادات';
-
+                document.getElementById('adminToggleBtn').innerText = '✕';
                 updateClinicsUI();
             } else {
                 alert('الرقم السري غير صحيح!');
@@ -501,13 +487,14 @@
         }
 
         function removeClinic(index) {
-            let clinics = getClinics();
-            if (clinics.length <= 1) {
+            let clinics = getConn();
+            let clinicsList = getClinics();
+            if (clinicsList.length <= 1) {
                 alert('يجب أن تبقى عيادة واحدة على الأقل!');
                 return;
             }
-            clinics.splice(index, 1);
-            saveClinics(clinics);
+            clinicsList.splice(index, 1);
+            saveClinics(clinicsList);
         }
 
         function changePin() {
