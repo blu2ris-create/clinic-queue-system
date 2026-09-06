@@ -132,8 +132,8 @@
         <p class="text-center text-muted small mb-4">مركز صحي الصالحية للرعاية الأولية</p>
         
         <div class="mb-3">
-            <label class="form-label">رقم أو اسم المراجع:</label>
-            <input type="text" id="patientName" class="form-control" placeholder="مثال: 85 أو محمد العبدالله" autocomplete="off">
+            <label class="form-label">رقم المراجع (أرقام فقط لضمان النطق):</label>
+            <input type="number" id="patientName" class="form-control" placeholder="مثال: 85 أو 102" autocomplete="off">
         </div>
 
         <div class="mb-4">
@@ -301,7 +301,6 @@
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
 
-            // فك قفل الصوتيات على متصفح شاشة LG
             try {
                 airportChimeSound.currentTime = 0;
                 await airportChimeSound.play();
@@ -320,34 +319,38 @@
             });
         }
 
-        // محرك النطق المحسّن المخصص لشاشات التلفاز الذكية لضمان نطق الأسماء بوضوح
-        function speakTextWebAPI(text) {
+        // محرك نطق احتياطي عبر خدمة ويب ناطقة سحابية مجانية ومباشرة تتجاوز قيود متصفح شاشة LG تماماً
+        function speakViaCloudAPI(text) {
+            return new Promise((resolve) => {
+                // استخدام رابط محرك صوتي سحابي مباشر (Google Translate TTS API) المعتمد الذي يعمل بنجاح على الشاشات الذكية
+                const encodedText = encodeURIComponent(text);
+                const cloudAudioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=ar&client=tw-ob`;
+                
+                const audio = new Audio(cloudAudioUrl);
+                audio.volume = 1.0;
+                audio.onended = () => resolve();
+                audio.onerror = () => {
+                    // في حال فشل الاتصال بالانترنت، يتم الاعتماد على نظام متصفح الشاشة الداخلي كخيار أخير
+                    fallbackBrowserSpeech(text).then(resolve);
+                };
+                audio.play().catch(() => {
+                    fallbackBrowserSpeech(text).then(resolve);
+                });
+            });
+        }
+
+        function fallbackBrowserSpeech(text) {
             return new Promise((resolve) => {
                 if (!window.speechSynthesis) {
                     resolve();
                     return;
                 }
-                
                 window.speechSynthesis.cancel();
-                
-                // التأكد من تحميل أصوات النظام المتاحة على التلفاز
-                let voices = window.speechSynthesis.getVoices();
-                let arVoice = voices.find(v => v.lang.includes('ar') || v.lang.includes('AR'));
-
                 const utterance = new SpeechSynthesisUtterance(text);
-                if (arVoice) {
-                    utterance.voice = arVoice;
-                }
                 utterance.lang = 'ar-SA';
-                utterance.rate = 0.85; // سرعة هادئة ومفهومة جداً داخل المركز الصحي
-                utterance.pitch = 1.0;
-
+                utterance.rate = 0.9;
                 utterance.onend = () => resolve();
                 utterance.onerror = () => resolve();
-
-                // مهلة أمان لضمان عدم تعليق طابور النداء لو تأخر محرك الصوت في الشاشة
-                setTimeout(() => resolve(), 6000);
-
                 window.speechSynthesis.speak(utterance);
             });
         }
@@ -358,7 +361,7 @@
             const clinic = document.getElementById('clinicSelect').value;
 
             if (!name) {
-                alert('الرجاء إدخال اسم أو رقم المراجع');
+                alert('الرجاء إدخال رقم المراجع');
                 nameInput.focus();
                 return;
             }
@@ -386,15 +389,14 @@
             const data = callQueue.shift();
 
             try {
-                // 1) تشغيل نغمة التنبيه في المطار أولاً
+                // 1) تشغيل نغمة المطار التنبيهية
                 await playAudioFile('https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/mixkit-melodic-airport-announcement-ding-1570.mp3');
                 
-                // فاصل بسيط جداً لنقاء الصوت
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 300));
 
-                // 2) نطق النداء بالصوت (يرجى توجه المراجع فلان إلى العيادة كذا)
-                const fullAnnouncement = `يرجى من المراجع رقم أو اسم، ${data.name}، التوجه إلى، ${data.clinic}`;
-                await speakTextWebAPI(fullAnnouncement);
+                // 2) نطق النداء بالصوت باستخدام محرك السحابة المباشر (يتجاوز قيود شاشة LG بصوت بشري واضح)
+                const fullAnnouncement = `يرجى من المراجع رقم ${data.name} التوجه إلى ${data.clinic}`;
+                await speakViaCloudAPI(fullAnnouncement);
 
                 // 3) تحديث الشاشة الرئيسية بصرياً
                 document.getElementById('mainPatient').innerText = data.name;
@@ -487,7 +489,6 @@
         }
 
         function removeClinic(index) {
-            let clinics = getConn();
             let clinicsList = getClinics();
             if (clinicsList.length <= 1) {
                 alert('يجب أن تبقى عيادة واحدة على الأقل!');
