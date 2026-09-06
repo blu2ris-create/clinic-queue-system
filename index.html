@@ -206,6 +206,21 @@
         const airportChimeSound = new Audio('https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/mixkit-melodic-airport-announcement-ding-1570.mp3');
         airportChimeSound.volume = 1.0;
 
+        /*
+         * إعدادات الصوت البشري AI
+         * ضع هنا رابط خدمة TTS الخلفية (Proxy / API) التي تُنشئ ملف MP3.
+         * يجب أن تستقبل الخدمة POST بصيغة JSON:
+         * { "text": "النص العربي", "language": "ar-SA" }
+         * ويجب أن تُرجع ملفاً صوتياً audio/mpeg أو رابط MP3.
+         *
+         * مهم: لا تضع مفتاح ElevenLabs / OpenAI / Azure داخل هذا الملف،
+         * لأن شاشة LG ستكشف المفتاح لأي شخص يفتح الصفحة.
+         */
+        const TTS_API_URL = 'PUT_YOUR_SECURE_TTS_PROXY_URL_HERE';
+
+        let currentVoiceAudio = null;
+        let currentVoiceObjectUrl = null;
+
         const defaultClinics = [
             "عيادة طب الأسرة رقم 1",
             "عيادة الأسنان رقم 1",
@@ -305,19 +320,58 @@
             }
         }
 
-        function activateDisplayScreen() {
+        async function activateDisplayScreen() {
             isScreenActive = true;
             document.getElementById('displayOverlay').style.display = 'none';
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
-            playRealChime();
-        }
 
-        function playRealChime() {
+            // فتح صلاحية الصوت من تفاعل المستخدم المباشر، وهو مهم خصوصاً في webOS/LG.
             try {
                 airportChimeSound.currentTime = 0;
-                airportChimeSound.play().catch(e => {});
-            } catch(e) {}
+                await airportChimeSound.play();
+                airportChimeSound.pause();
+                airportChimeSound.currentTime = 0;
+            } catch (e) {
+                console.warn('تعذر تفعيل الصوت مبدئياً:', e);
+            }
+        }
+
+        function playRealChimeAndWait() {
+            return new Promise((resolve, reject) => {
+                try {
+                    airportChimeSound.pause();
+                    airportChimeSound.currentTime = 0;
+
+                    const cleanup = () => {
+                        airportChimeSound.removeEventListener('ended', onEnded);
+                        airportChimeSound.removeEventListener('error', onError);
+                    };
+
+                    const onEnded = () => {
+                        cleanup();
+                        resolve();
+                    };
+
+                    const onError = (error) => {
+                        cleanup();
+                        reject(error);
+                    };
+
+                    airportChimeSound.addEventListener('ended', onEnded, { once: true });
+                    airportChimeSound.addEventListener('error', onError, { once: true });
+
+                    const playPromise = airportChimeSound.play();
+                    if (playPromise) {
+                        playPromise.catch(error => {
+                            cleanup();
+                            reject(error);
+                        });
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            });
         }
 
         function sendCall() {
@@ -347,66 +401,134 @@
             nameInput.focus();
         }
 
-        function getBestNaturalArabicVoice() {
-            if (!('speechSynthesis' in window)) return null;
-            let voices = window.speechSynthesis.getVoices();
-            let arabicVoices = voices.filter(v => v.lang.startsWith('ar') || v.lang.includes('AR'));
-            if (arabicVoices.length === 0) return null;
-            let preferredVoice = arabicVoices.find(v => v.name.includes('Natural') || v.name.includes('Microsoft') || v.name.includes('Maged') || v.name.includes('Tarik'));
-            return preferredVoice || arabicVoices[0];
+        function buildAnnouncementText(data) {
+            return `يرجى من المراجع ${data.name} التوجه إلى ${data.clinic}`;
         }
 
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = getBestNaturalArabicVoice;
+        async function requestAIVoice(text) {
+            if (!TTS_API_URL || TTS_API_URL.includes('PUT_YOUR_SECURE_TTS_PROXY_URL_HERE')) {
+                throw new Error('لم يتم إعداد رابط خدمة الصوت AI الآمنة (TTS_API_URL).');
+            }
+
+            const response = await fetch(TTS_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: text,
+                    language: 'ar-SA',
+                    format: 'mp3'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`فشل إنشاء الصوت AI: ${response.status}`);
+            }
+
+            const contentType = (response.headers.get('content-type') || '').toLowerCase();
+
+            // الخيار 1: الخدمة تُرجع ملف MP3 مباشرة.
+            if (contentType.includes('audio/') || contentType.includes('application/octet-stream')) {
+                const audioBlob = await response.blob();
+                if (currentVoiceObjectUrl) URL.revokeObjectURL(currentVoiceObjectUrl);
+                currentVoiceObjectUrl = URL.createObjectURL(audioBlob);
+                return currentVoiceObjectUrl;
+            }
+
+            // الخيار 2: الخدمة تُرجع JSON يحتوي على رابط MP3.
+            const result = await response.json();
+            if (result.audioUrl) return result.audioUrl;
+            if (result.url) return result.url;
+
+            throw new Error('استجابة خدمة TTS لا تحتوي على ملف صوت أو رابط audioUrl.');
         }
 
-        function processQueue() {
+        function playAIAudio(audioUrl) {
+            return new Promise((resolve, reject) => {
+                try {
+                    if (currentVoiceAudio) {
+                        currentVoiceAudio.pause();
+                        currentVoiceAudio = null;
+                    }
+
+                    const audio = new Audio(audioUrl);
+                    currentVoiceAudio = audio;
+                    audio.volume = 1.0;
+                    audio.preload = 'auto';
+
+                    const cleanup = () => {
+                        audio.removeEventListener('ended', onEnded);
+                        audio.removeEventListener('error', onError);
+                    };
+
+                    const onEnded = () => {
+                        cleanup();
+                        resolve();
+                    };
+
+                    const onError = (error) => {
+                        cleanup();
+                        reject(error);
+                    };
+
+                    audio.addEventListener('ended', onEnded, { once: true });
+                    audio.addEventListener('error', onError, { once: true });
+
+                    const playPromise = audio.play();
+                    if (playPromise) {
+                        playPromise.catch(error => {
+                            cleanup();
+                            reject(error);
+                        });
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        async function processQueue() {
             if (isCalling || callQueue.length === 0) return;
 
             isCalling = true;
             const data = callQueue.shift();
 
-            document.getElementById('mainPatient').innerText = data.name;
-            document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
+            try {
+                // 1) 🔔 نغمة المطار — ننتظر حتى تنتهي فعلياً.
+                await playRealChimeAndWait();
 
-            playRealChime();
+                // 2) 🗣️ إنشاء/استلام ملف MP3 بصوت AI بشري طبيعي ثم تشغيله.
+                const spokenText = buildAnnouncementText(data);
+                const audioUrl = await requestAIVoice(spokenText);
+                await playAIAudio(audioUrl);
 
-            setTimeout(() => {
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                    
-                    const spokenText = "يرجو من المراجع " + data.name + " التوجه إلى " + data.clinic;
-                    const utterance = new SpeechSynthesisUtterance(spokenText);
-                    
-                    utterance.lang = 'ar-SA';
-                    utterance.rate = 0.85; 
-                    utterance.pitch = 1.0;
-                    
-                    let bestVoice = getBestNaturalArabicVoice();
-                    if (bestVoice) {
-                        utterance.voice = bestVoice;
-                    }
+                // 3) 📺 بعد انتهاء الصوت يظهر النداء على الشاشة.
+                document.getElementById('mainPatient').innerText = data.name;
+                document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
 
-                    utterance.onend = () => {
-                        isCalling = false;
-                        processQueue();
-                    };
+                saveToArchive(data);
+            } catch (error) {
+                console.error('خطأ في تنفيذ النداء الصوتي:', error);
 
-                    utterance.onerror = () => {
-                        isCalling = false;
-                        processQueue();
-                    };
+                // عند فشل TTS لا تتوقف الطوابير: يظهر النداء ويتم الانتقال للنداء التالي.
+                document.getElementById('mainPatient').innerText = data.name;
+                document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
+                saveToArchive(data);
+            } finally {
+                isCalling = false;
 
-                    window.speechSynthesis.speak(utterance);
-                } else {
+                if (currentVoiceObjectUrl) {
                     setTimeout(() => {
-                        isCalling = false;
-                        processQueue();
-                    }, 4000);
+                        if (currentVoiceObjectUrl) {
+                            URL.revokeObjectURL(currentVoiceObjectUrl);
+                            currentVoiceObjectUrl = null;
+                        }
+                    }, 1000);
                 }
-            }, 2500);
 
-            saveToArchive(data);
+                processQueue();
+            }
         }
 
         function saveToArchive(data) {
