@@ -193,10 +193,7 @@
         let callQueue = [];
         let isAdminLoggedIn = false;
 
-        const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/";
-        
-        // 🔔 رابط النغمة الأساسي المباشر السليم
-        const chimeAudioUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/audio/ding.mp3";
+        const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/clinic-queue-system/main/";
 
         const clinicAudioMap = {
             "عيادة طب الأسرة رقم 1": "family.mp3",
@@ -206,6 +203,21 @@
             "عيادة المدرب الصحي": "coach.mp3",
             "غرفة سحب الدم": "lab.mp3",
             "عيادة التطعيم": "vaccine.mp3"
+        };
+
+        // جدول مطابقة الأرقام لأسماء ملفات الصوت العربية الفعليّة في المستودع
+        const numberToAudioName = {
+            "0": "صفر", "1": "واحد", "2": "اثنان", "3": "ثلاثة", "4": "أربعة", 
+            "5": "خمسة", "6": "ستة", "7": "سبعة", "8": "ثمانية", "9": "تسعة",
+            "10": "عشرة", "11": "أحد عشر", "12": "اثنا عشر", "13": "ثلاثة عشر", "14": "أربعة عشر",
+            "15": "خمسة عشر", "16": "ستة عشر", "17": "سبعة عشر", "18": "ثمانية عشر", "19": "تسعة عشر",
+            "20": "عشرون", "30": "ثلاثون", "40": "أربعون", "50": "خمسون",
+            "60": "ستون", "70": "سبعون", "80": "ثمانون", "90": "تسعون",
+            "100": "مائة", "200": "مائتان", "300": "ثلاثمائة", "400": "أربعمائة",
+            "500": "خمسمائة", "600": "ستمائة", "700": "سبعمائة", "800": "ثمانمائة", "900": "تسعمائة",
+            "wa": "و",
+            "please_wait": "يرجى_من_المراجع_رقم",
+            "goto": "التوجه_إلى"
         };
 
         const defaultClinics = Object.keys(clinicAudioMap);
@@ -307,18 +319,24 @@
             requestFullscreen();
 
             try {
-                const initAudio = new Audio(chimeAudioUrl);
+                const initAudio = new Audio(githubAudioBaseUrl + 'mixkit-melodic-airport-announcement-ding-1570.mp3');
                 await initAudio.play();
                 initAudio.pause();
             } catch (e) {}
         }
 
-        function playAudioFile(url) {
+        function playAudioFile(key) {
             return new Promise((resolve) => {
+                let fileName = numberToAudioName[key] ? numberToAudioName[key] + '.mp3' : key;
+                let url = githubAudioBaseUrl + encodeURIComponent(fileName);
+                
                 const audio = new Audio(url);
                 audio.volume = 1.0;
                 audio.onended = () => resolve();
-                audio.onerror = () => resolve(); 
+                audio.onerror = () => {
+                    // في حال لم يتم العثور على الملف الصوتي العربي، نتجاوز بهدوء حتى لا يتوقف النداء
+                    resolve(); 
+                };
                 audio.play().catch(() => resolve());
             });
         }
@@ -350,30 +368,26 @@
             nameInput.focus();
         }
 
-        // 🧠 الدالة الذكية لتقسيم وتركيب الأرقام (الآحاد، حرف الـ "و"، العشرات، المئات)
         async function playNumberSequence(numStr) {
             let num = parseInt(numStr);
             if (isNaN(num)) {
-                await playAudioFile(githubAudioBaseUrl + numStr + '.mp3');
+                await playAudioFile(numStr);
                 return;
             }
 
             let parts = [];
-
             let hundreds = Math.floor(num / 100) * 100;
             let remainder = num % 100;
             let tens = Math.floor(remainder / 10) * 10;
             let units = remainder % 10;
 
-            // 1) إضافة المئات
             if (hundreds > 0) {
                 parts.push(hundreds.toString());
             }
 
-            // 2) معالجة العشرات والآحاد مع حرف الـ "و"
             if (remainder > 0) {
                 if (hundreds > 0) {
-                    parts.push('wa'); // حرف الواو بعد المئات
+                    parts.push('wa');
                 }
 
                 if (remainder <= 20 || units === 0) {
@@ -390,8 +404,7 @@
             }
 
             for (let part of parts) {
-                let fileUrl = githubAudioBaseUrl + part + '.mp3';
-                await playAudioFile(fileUrl);
+                await playAudioFile(part);
                 await new Promise(r => setTimeout(r, 805));
             }
         }
@@ -403,20 +416,20 @@
             const data = callQueue.shift();
 
             try {
-                // 1) نغمة التنبيه المباشرة
-                await playAudioFile(chimeAudioUrl);
+                // 1) نغمة التنبيه
+                await playAudioFile(githubAudioBaseUrl + 'mixkit-melodic-airport-announcement-ding-1570.mp3');
                 await new Promise(r => setTimeout(r, 300));
 
                 // 2) عبارة "يرجى من المراجع رقم"
-                await playAudioFile(githubAudioBaseUrl + 'please_wait.mp3');
+                await playAudioFile('please_wait');
                 await new Promise(r => setTimeout(r, 200));
 
-                // 3) تشغيل الرقم بالتركيب الذكي
+                // 3) نطق الرقم بالأسماء العربية السليمة
                 await playNumberSequence(data.name);
                 await new Promise(r => setTimeout(r, 200));
 
                 // 4) عبارة "التوجه إلى"
-                await playAudioFile(githubAudioBaseUrl + 'goto.mp3');
+                await playAudioFile('goto');
                 await new Promise(r => setTimeout(r, 200));
 
                 // 5) تشغيل العيادة المحددة
@@ -530,7 +543,6 @@
             }
             localStorage.setItem('umran_admin_pin', newPin);
             alert('تم تغيير الرقم السري بنجاح!');
-            document.getElementById('newPinInput2')?.value;
         }
     </script>
 </body>
