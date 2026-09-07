@@ -133,7 +133,7 @@
         
         <div class="mb-3">
             <label class="form-label">رقم المراجع:</label>
-            <input type="number" id="patientName" class="form-control" placeholder="مثال: 51 أو 125" autocomplete="off">
+            <input type="number" id="patientName" class="form-control" placeholder="مثال: 44 أو 125" autocomplete="off">
         </div>
 
         <div class="mb-4">
@@ -303,7 +303,6 @@
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
 
-            // تفعيل صوت تجريبي فوري لكسر قفل الحظر التلقائي بالمتصفح
             try {
                 const initAudio = new Audio(githubAudioBaseUrl + "audio/ding.mp3");
                 initAudio.volume = 0.01;
@@ -312,7 +311,6 @@
             } catch (e) {}
         }
 
-        // دالة محسنة لتشغيل ملفات الصوت مع ضمان التحميل الكامل قبل التشغيل
         function playAudioFile(fileName) {
             return new Promise((resolve) => {
                 let url = githubAudioBaseUrl + fileName;
@@ -322,13 +320,9 @@
                 audio.volume = 1.0;
                 
                 audio.onended = () => resolve();
-                audio.onerror = () => {
-                    resolve(); // تجاوز الملف بهدوء لو حصل أي خطأ بالتحميل لتلافي توقف الطابور
-                };
+                audio.onerror = () => resolve();
 
-                audio.play().catch(() => {
-                    resolve();
-                });
+                audio.play().catch(() => resolve());
             });
         }
 
@@ -394,9 +388,10 @@
                 parts.push("0.mp3");
             }
 
+            // تم تقليل الفاصل الزمني بين أجزاء الرقم ليكون متصلاً وطبيعياً تماماً (50 جزء من الثانية فقط)
             for (let part of parts) {
                 await playAudioFile(part);
-                await new Promise(r => setTimeout(r, 200)); // الفاصل الزمني البسيط بين الأرقام
+                await new Promise(r => setTimeout(r, 50)); 
             }
         }
 
@@ -409,19 +404,19 @@
             try {
                 // 1) نغمة التنبيه
                 await playAudioFile('audio/ding.mp3');
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 150));
 
                 // 2) يرجى من المراجع رقم
                 await playAudioFile('please_wait.mp3');
-                await new Promise(r => setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 150));
 
-                // 3) قراءة الأرقام بالتسلسل
+                // 3) قراءة الأرقام بالتسلسل المتصل
                 await playNumberSequence(data.name);
-                await new Promise(r => setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 150));
 
                 // 4) التوجه إلى
                 await playAudioFile('goto.mp3');
-                await new Promise(r => setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 150));
 
                 // 5) العيادة المستهدفة
                 let clinicFile = clinicAudioMap[data.clinic] || 'family.mp3';
