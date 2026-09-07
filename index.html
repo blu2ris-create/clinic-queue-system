@@ -193,7 +193,8 @@
         let callQueue = [];
         let isAdminLoggedIn = false;
 
-        const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/clinic-queue-system/main/";
+        // الرابط الصحيح لمستودع النغمات الظاهر في صورك
+        const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/";
 
         const clinicAudioMap = {
             "عيادة طب الأسرة رقم 1": "family.mp3",
@@ -203,22 +204,6 @@
             "عيادة المدرب الصحي": "coach.mp3",
             "غرفة سحب الدم": "lab.mp3",
             "عيادة التطعيم": "vaccine.mp3"
-        };
-
-        // خريطة مطابقة المفاتيح لأسماء ملفات الصوت العربيّة الفعليّة في المستودع
-        const audioFileMap = {
-            "ding": "mixkit-melodic-airport-announcement-ding-1570.mp3",
-            "please_wait": "يرجى_من_المراجع_رقم.mp3",
-            "goto": "التوجه_إلى.mp3",
-            "wa": "و.mp3",
-            "0": "صفر.mp3", "1": "واحد.mp3", "2": "اثنان.mp3", "3": "ثلاثة.mp3", "4": "أربعة.mp3", 
-            "5": "خمسة.mp3", "6": "ستة.mp3", "7": "سبعة.mp3", "8": "ثمانية.mp3", "9": "تسعة.mp3",
-            "10": "عشرة.mp3", "11": "أحد عشر.mp3", "12": "اثنا عشر.mp3", "13": "ثلاثة عشر.mp3", "14": "أربعة عشر.mp3",
-            "15": "خمسة عشر.mp3", "16": "ستة عشر.mp3", "17": "سبعة عشر.mp3", "18": "ثمانية عشر.mp3", "19": "تسعة عشر.mp3",
-            "20": "عشرون.mp3", "30": "ثلاثون.mp3", "40": "أربعون.mp3", "50": "خمسون.mp3",
-            "60": "ستون.mp3", "70": "سبعون.mp3", "80": "ثمانون.mp3", "90": "تسعون.mp3",
-            "100": "مائة.mp3", "200": "مائتان.mp3", "300": "ثلاثمائة.mp3", "400": "أربعمائة.mp3",
-            "500": "خمسمائة.mp3", "600": "ستمائة.mp3", "700": "سبعمائة.mp3", "800": "ثمانمائة.mp3", "900": "تسعمائة.mp3"
         };
 
         const defaultClinics = Object.keys(clinicAudioMap);
@@ -320,23 +305,21 @@
             requestFullscreen();
 
             try {
-                const initAudio = new Audio(githubAudioBaseUrl + encodeURIComponent(audioFileMap["ding"]));
+                // النغمة موجودة داخل مجلد audio كما يظهر في صورتك الأولى
+                const initAudio = new Audio(githubAudioBaseUrl + "audio/ding.mp3");
                 await initAudio.play();
                 initAudio.pause();
             } catch (e) {}
         }
 
-        // دالة موحدة لطلب وتشغيل ملفات الصوت من قيت هب بشكل صحيح وآمن
-        function playAudioFile(key) {
+        function playAudioFile(fileName) {
             return new Promise((resolve) => {
-                let fileName = audioFileMap[key] || key;
-                let url = githubAudioBaseUrl + encodeURIComponent(fileName);
-                
+                let url = githubAudioBaseUrl + fileName;
                 const audio = new Audio(url);
                 audio.volume = 1.0;
                 audio.onended = () => resolve();
                 audio.onerror = () => {
-                    resolve(); // تجاوز الصامت لأي ملف غير موجود لكي لا يتوقف التسلسل
+                    resolve(); 
                 };
                 audio.play().catch(() => resolve());
             });
@@ -372,7 +355,7 @@
         async function playNumberSequence(numStr) {
             let num = parseInt(numStr);
             if (isNaN(num)) {
-                await playAudioFile(numStr);
+                await playAudioFile(numStr + ".mp3");
                 return;
             }
 
@@ -383,25 +366,25 @@
             let units = remainder % 10;
 
             if (hundreds > 0) {
-                parts.push(hundreds.toString());
+                parts.push(hundreds + ".mp3");
             }
 
             if (remainder > 0) {
                 if (hundreds > 0) {
-                    parts.push('wa');
+                    parts.push("wa.mp3");
                 }
 
                 if (remainder <= 20 || units === 0) {
-                    parts.push(remainder.toString());
+                    parts.push(remainder + ".mp3");
                 } else {
-                    parts.push(units.toString());
-                    parts.push('wa');
-                    parts.push(tens.toString());
+                    parts.push(units + ".mp3");
+                    parts.push("wa.mp3");
+                    parts.push(tens + ".mp3");
                 }
             }
 
             if (parts.length === 0) {
-                parts.push('0');
+                parts.push("0.mp3");
             }
 
             for (let part of parts) {
@@ -417,27 +400,25 @@
             const data = callQueue.shift();
 
             try {
-                // 1) نغمة التنبيه (Ding)
-                await playAudioFile('ding');
+                // 1) نغمة التنبيه من مجلد audio
+                await playAudioFile('audio/ding.mp3');
                 await new Promise(r => setTimeout(r, 300));
 
-                // 2) عبارة "يرجى من المراجع رقم"
-                await playAudioFile('please_wait');
+                // 2) عبارة "يرجى من المراجع رقم" المطابقة لاسم الملف عندك (please_wait.mp3)
+                await playAudioFile('please_wait.mp3');
                 await new Promise(r => setTimeout(r, 200));
 
-                // 3) نطق الرقم بالترتيب الصحيح
+                // 3) نطق الأرقام بالملفات الإنجليزية المطابقة (1.mp3, 50.mp3 ... إلخ)
                 await playNumberSequence(data.name);
                 await new Promise(r => setTimeout(r, 200));
 
-                // 4) عبارة "التوجه إلى"
-                await playAudioFile('goto');
+                // 4) عبارة "التوجه إلى" المطابقة لاسم الملف (goto.mp3)
+                await playAudioFile('goto.mp3');
                 await new Promise(r => setTimeout(r, 200));
 
-                // 5) تشغيل العيادة المحددة
+                // 5) تشغيل العيادة المحددة من الخريطة
                 let clinicFile = clinicAudioMap[data.clinic] || 'family.mp3';
-                // إزالة الامتداد إن وجد في الخريطة لضمان التوافق
-                let cleanClinicFile = clinicFile.replace('.mp3', '');
-                await playAudioFile(cleanClinicFile);
+                await playAudioFile(clinicFile);
 
                 document.getElementById('mainPatient').innerText = data.name;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
