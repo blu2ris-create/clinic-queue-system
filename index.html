@@ -133,7 +133,7 @@
         
         <div class="mb-3">
             <label class="form-label">رقم المراجع:</label>
-            <input type="number" id="patientName" class="form-control" placeholder="مثال: 85 أو 102" autocomplete="off">
+            <input type="number" id="patientName" class="form-control" placeholder="مثال: 51 أو 125" autocomplete="off">
         </div>
 
         <div class="mb-4">
@@ -193,10 +193,8 @@
         let callQueue = [];
         let isAdminLoggedIn = false;
 
-        // رابط ملفات الصوت المباشر من مستودعك
         const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/";
 
-        // خريطة أسماء العيادات وما يناظره من ملف الصوت المرفوع
         const clinicAudioMap = {
             "عيادة طب الأسرة رقم 1": "family.mp3",
             "عيادة الأسنان رقم 1": "dental.mp3",
@@ -305,7 +303,6 @@
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
 
-            // فك قفل الصوت على شاشة LG بالضغطة الأولى
             try {
                 const initAudio = new Audio(githubAudioBaseUrl + 'ding.mp3');
                 await initAudio.play();
@@ -318,7 +315,7 @@
                 const audio = new Audio(url);
                 audio.volume = 1.0;
                 audio.onended = () => resolve();
-                audio.onerror = () => resolve(); // تخطي إذا لم يوجد الملف لضمان استمرار النظام
+                audio.onerror = () => resolve(); 
                 audio.play().catch(() => resolve());
             });
         }
@@ -350,7 +347,7 @@
             nameInput.focus();
         }
 
-        // دالة تفكيك الرقم وتشغيله بالترتيب: (مئات، عشرات، آحاد) مع دعم حرف الـ "و"
+        // 🧠 الدالة الذكية لتقسيم وتركيب الأرقام (الآحاد، حرف الـ "و"، العشرات، المئات)
         async function playNumberSequence(numStr) {
             let num = parseInt(numStr);
             if (isNaN(num)) {
@@ -358,34 +355,45 @@
                 return;
             }
 
-            if (num <= 99 || num === 200 || num === 300 || num === 400 || num === 500) {
-                // إذا كان رقماً مباشراً موجوداً كملف واحد
-                let path = githubAudioBaseUrl + num + '.mp3';
-                await playAudioFile(path);
-                return;
-            }
+            let parts = [];
 
-            // تحليل الأرقام المركبة (مثلاً مئات وعشرات وآحاد)
             let hundreds = Math.floor(num / 100) * 100;
             let remainder = num % 100;
             let tens = Math.floor(remainder / 10) * 10;
             let units = remainder % 10;
 
-            let parts = [];
-            if (hundreds > 0) parts.push(hundreds);
-            
-            if (tens > 0 && units > 0) {
-                parts.push(units);
-                parts.push('wa');
-                parts.push(tens);
-            } else {
-                if (tens > 0) parts.push(tens);
-                if (units > 0) parts.push(units);
+            // 1) إضافة المئات (إن وجدت، مثل 100, 200...)
+            if (hundreds > 0) {
+                parts.push(hundreds.toString());
             }
 
+            // 2) معالجة العشرات والآحاد مع حرف الـ "و"
+            if (remainder > 0) {
+                if (hundreds > 0) {
+                    parts.push('wa'); // حرف الواو بعد المئات
+                }
+
+                if (remainder <= 20 || units === 0) {
+                    // الأرقام التحت 20 أو العشرات الصريحة (مثل 10, 20, 50)
+                    parts.push(remainder.toString());
+                } else {
+                    // الأرقام المركبة مثل 51 (تصبح: 1 + و + 50)
+                    parts.push(units.toString());
+                    parts.push('wa');
+                    parts.push(tens.toString());
+                }
+            }
+
+            // إذا كان الرقم صفر أو غير ذلك
+            if (parts.length === 0) {
+                parts.push('0');
+            }
+
+            // تشغيل الملفات الصوتية متتالية بالترتيب الصحيح
             for (let part of parts) {
-                await playAudioFile(githubAudioBaseUrl + part + '.mp3');
-                await new Promise(r => setTimeout(r, 60));
+                let fileUrl = githubAudioBaseUrl + part + '.mp3';
+                await playAudioFile(fileUrl);
+                await new Promise(r => setTimeout(r, 805)); // فاصل زمني قصير وناعم بين الكلمات
             }
         }
 
@@ -398,25 +406,24 @@
             try {
                 // 1) نغمة التنبيه
                 await playAudioFile(githubAudioBaseUrl + 'ding.mp3');
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 300));
 
                 // 2) عبارة "يرجى من المراجع رقم"
                 await playAudioFile(githubAudioBaseUrl + 'please_wait.mp3');
-                await new Promise(r => setTimeout(r, 150));
+                await new Promise(r => setTimeout(r, 200));
 
-                // 3) تشغيل الرقم بالترتيب الذكي (مع ربط حرف الواو تلقائياً)
+                // 3) تشغيل الرقم بالتركيب الذكي (مثلاً 51 ينطق: واحد + و + خمسون)
                 await playNumberSequence(data.name);
-                await new Promise(r => setTimeout(r, 150));
+                await new Promise(r => setTimeout(r, 200));
 
                 // 4) عبارة "التوجه إلى"
                 await playAudioFile(githubAudioBaseUrl + 'goto.mp3');
-                await new Promise(r => setTimeout(r, 150));
+                await new Promise(r => setTimeout(r, 200));
 
                 // 5) تشغيل العيادة المحددة
                 let clinicFile = clinicAudioMap[data.clinic] || 'family.mp3';
                 await playAudioFile(githubAudioBaseUrl + clinicFile);
 
-                // تحديث واجهة الشاشة
                 document.getElementById('mainPatient').innerText = data.name;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
 
@@ -524,7 +531,7 @@
             }
             localStorage.setItem('umran_admin_pin', newPin);
             alert('تم تغيير الرقم السري بنجاح!');
-            document.getElementById('newPinInput').value = '';
+            document.getElementById('newPinInput2')?.value;
         }
     </script>
 </body>
