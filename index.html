@@ -205,19 +205,20 @@
             "عيادة التطعيم": "vaccine.mp3"
         };
 
-        // جدول مطابقة الأرقام لأسماء ملفات الصوت العربية الفعليّة في المستودع
-        const numberToAudioName = {
-            "0": "صفر", "1": "واحد", "2": "اثنان", "3": "ثلاثة", "4": "أربعة", 
-            "5": "خمسة", "6": "ستة", "7": "سبعة", "8": "ثمانية", "9": "تسعة",
-            "10": "عشرة", "11": "أحد عشر", "12": "اثنا عشر", "13": "ثلاثة عشر", "14": "أربعة عشر",
-            "15": "خمسة عشر", "16": "ستة عشر", "17": "سبعة عشر", "18": "ثمانية عشر", "19": "تسعة عشر",
-            "20": "عشرون", "30": "ثلاثون", "40": "أربعون", "50": "خمسون",
-            "60": "ستون", "70": "سبعون", "80": "ثمانون", "90": "تسعون",
-            "100": "مائة", "200": "مائتان", "300": "ثلاثمائة", "400": "أربعمائة",
-            "500": "خمسمائة", "600": "ستمائة", "700": "سبعمائة", "800": "ثمانمائة", "900": "تسعمائة",
-            "wa": "و",
-            "please_wait": "يرجى_من_المراجع_رقم",
-            "goto": "التوجه_إلى"
+        // خريطة مطابقة المفاتيح لأسماء ملفات الصوت العربيّة الفعليّة في المستودع
+        const audioFileMap = {
+            "ding": "mixkit-melodic-airport-announcement-ding-1570.mp3",
+            "please_wait": "يرجى_من_المراجع_رقم.mp3",
+            "goto": "التوجه_إلى.mp3",
+            "wa": "و.mp3",
+            "0": "صفر.mp3", "1": "واحد.mp3", "2": "اثنان.mp3", "3": "ثلاثة.mp3", "4": "أربعة.mp3", 
+            "5": "خمسة.mp3", "6": "ستة.mp3", "7": "سبعة.mp3", "8": "ثمانية.mp3", "9": "تسعة.mp3",
+            "10": "عشرة.mp3", "11": "أحد عشر.mp3", "12": "اثنا عشر.mp3", "13": "ثلاثة عشر.mp3", "14": "أربعة عشر.mp3",
+            "15": "خمسة عشر.mp3", "16": "ستة عشر.mp3", "17": "سبعة عشر.mp3", "18": "ثمانية عشر.mp3", "19": "تسعة عشر.mp3",
+            "20": "عشرون.mp3", "30": "ثلاثون.mp3", "40": "أربعون.mp3", "50": "خمسون.mp3",
+            "60": "ستون.mp3", "70": "سبعون.mp3", "80": "ثمانون.mp3", "90": "تسعون.mp3",
+            "100": "مائة.mp3", "200": "مائتان.mp3", "300": "ثلاثمائة.mp3", "400": "أربعمائة.mp3",
+            "500": "خمسمائة.mp3", "600": "ستمائة.mp3", "700": "سبعمائة.mp3", "800": "ثمانمائة.mp3", "900": "تسعمائة.mp3"
         };
 
         const defaultClinics = Object.keys(clinicAudioMap);
@@ -319,23 +320,23 @@
             requestFullscreen();
 
             try {
-                const initAudio = new Audio(githubAudioBaseUrl + 'mixkit-melodic-airport-announcement-ding-1570.mp3');
+                const initAudio = new Audio(githubAudioBaseUrl + encodeURIComponent(audioFileMap["ding"]));
                 await initAudio.play();
                 initAudio.pause();
             } catch (e) {}
         }
 
+        // دالة موحدة لطلب وتشغيل ملفات الصوت من قيت هب بشكل صحيح وآمن
         function playAudioFile(key) {
             return new Promise((resolve) => {
-                let fileName = numberToAudioName[key] ? numberToAudioName[key] + '.mp3' : key;
+                let fileName = audioFileMap[key] || key;
                 let url = githubAudioBaseUrl + encodeURIComponent(fileName);
                 
                 const audio = new Audio(url);
                 audio.volume = 1.0;
                 audio.onended = () => resolve();
                 audio.onerror = () => {
-                    // في حال لم يتم العثور على الملف الصوتي العربي، نتجاوز بهدوء حتى لا يتوقف النداء
-                    resolve(); 
+                    resolve(); // تجاوز الصامت لأي ملف غير موجود لكي لا يتوقف التسلسل
                 };
                 audio.play().catch(() => resolve());
             });
@@ -416,15 +417,15 @@
             const data = callQueue.shift();
 
             try {
-                // 1) نغمة التنبيه
-                await playAudioFile(githubAudioBaseUrl + 'mixkit-melodic-airport-announcement-ding-1570.mp3');
+                // 1) نغمة التنبيه (Ding)
+                await playAudioFile('ding');
                 await new Promise(r => setTimeout(r, 300));
 
                 // 2) عبارة "يرجى من المراجع رقم"
                 await playAudioFile('please_wait');
                 await new Promise(r => setTimeout(r, 200));
 
-                // 3) نطق الرقم بالأسماء العربية السليمة
+                // 3) نطق الرقم بالترتيب الصحيح
                 await playNumberSequence(data.name);
                 await new Promise(r => setTimeout(r, 200));
 
@@ -434,7 +435,9 @@
 
                 // 5) تشغيل العيادة المحددة
                 let clinicFile = clinicAudioMap[data.clinic] || 'family.mp3';
-                await playAudioFile(githubAudioBaseUrl + clinicFile);
+                // إزالة الامتداد إن وجد في الخريطة لضمان التوافق
+                let cleanClinicFile = clinicFile.replace('.mp3', '');
+                await playAudioFile(cleanClinicFile);
 
                 document.getElementById('mainPatient').innerText = data.name;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
