@@ -132,7 +132,7 @@
         <p class="text-center text-muted small mb-4">مركز صحي الصالحية للرعاية الأولية</p>
         
         <div class="mb-3">
-            <label class="form-label">رقم المراجع (أرقام فقط لضمان النطق):</label>
+            <label class="form-label">رقم المراجع:</label>
             <input type="number" id="patientName" class="form-control" placeholder="مثال: 85 أو 102" autocomplete="off">
         </div>
 
@@ -193,17 +193,21 @@
         let callQueue = [];
         let isAdminLoggedIn = false;
 
-        const airportChimeSound = new Audio('https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/mixkit-melodic-airport-announcement-ding-1570.mp3');
-        airportChimeSound.volume = 1.0;
+        // رابط ملفات الصوت المباشر من مستودعك
+        const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/";
 
-        const defaultClinics = [
-            "عيادة طب الأسرة رقم 1",
-            "عيادة الأسنان رقم 1",
-            "عيادة العلامات الحيوية",
-            "عيادة التطعيم",
-            "غرفة سحب الدم",
-            "عيادة متابعة الحوامل"
-        ];
+        // خريطة أسماء العيادات وما يناظره من ملف الصوت المرفوع
+        const clinicAudioMap = {
+            "عيادة طب الأسرة رقم 1": "family.mp3",
+            "عيادة الأسنان رقم 1": "dental.mp3",
+            "عيادة متابعة الحوامل": "pregnancy.mp3",
+            "عيادة العلامات الحيوية": "vitals.mp3",
+            "عيادة المدرب الصحي": "coach.mp3",
+            "غرفة سحب الدم": "lab.mp3",
+            "عيادة التطعيم": "vaccine.mp3"
+        };
+
+        const defaultClinics = Object.keys(clinicAudioMap);
 
         function getClinics() {
             let stored = localStorage.getItem('umran_clinics');
@@ -301,57 +305,21 @@
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
 
+            // فك قفل الصوت على شاشة LG بالضغطة الأولى
             try {
-                airportChimeSound.currentTime = 0;
-                await airportChimeSound.play();
-                airportChimeSound.pause();
-                airportChimeSound.currentTime = 0;
+                const initAudio = new Audio(githubAudioBaseUrl + 'ding.mp3');
+                await initAudio.play();
+                initAudio.pause();
             } catch (e) {}
         }
 
         function playAudioFile(url) {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 const audio = new Audio(url);
                 audio.volume = 1.0;
                 audio.onended = () => resolve();
-                audio.onerror = (err) => reject(err);
-                audio.play().catch(err => reject(err));
-            });
-        }
-
-        // محرك نطق احتياطي عبر خدمة ويب ناطقة سحابية مجانية ومباشرة تتجاوز قيود متصفح شاشة LG تماماً
-        function speakViaCloudAPI(text) {
-            return new Promise((resolve) => {
-                // استخدام رابط محرك صوتي سحابي مباشر (Google Translate TTS API) المعتمد الذي يعمل بنجاح على الشاشات الذكية
-                const encodedText = encodeURIComponent(text);
-                const cloudAudioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=ar&client=tw-ob`;
-                
-                const audio = new Audio(cloudAudioUrl);
-                audio.volume = 1.0;
-                audio.onended = () => resolve();
-                audio.onerror = () => {
-                    // في حال فشل الاتصال بالانترنت، يتم الاعتماد على نظام متصفح الشاشة الداخلي كخيار أخير
-                    fallbackBrowserSpeech(text).then(resolve);
-                };
-                audio.play().catch(() => {
-                    fallbackBrowserSpeech(text).then(resolve);
-                });
-            });
-        }
-
-        function fallbackBrowserSpeech(text) {
-            return new Promise((resolve) => {
-                if (!window.speechSynthesis) {
-                    resolve();
-                    return;
-                }
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'ar-SA';
-                utterance.rate = 0.9;
-                utterance.onend = () => resolve();
-                utterance.onerror = () => resolve();
-                window.speechSynthesis.speak(utterance);
+                audio.onerror = () => resolve(); // تخطي إذا لم يوجد الملف لضمان استمرار النظام
+                audio.play().catch(() => resolve());
             });
         }
 
@@ -382,6 +350,45 @@
             nameInput.focus();
         }
 
+        // دالة تفكيك الرقم وتشغيله بالترتيب: (مئات، عشرات، آحاد) مع دعم حرف الـ "و"
+        async function playNumberSequence(numStr) {
+            let num = parseInt(numStr);
+            if (isNaN(num)) {
+                await playAudioFile(githubAudioBaseUrl + numStr + '.mp3');
+                return;
+            }
+
+            if (num <= 99 || num === 200 || num === 300 || num === 400 || num === 500) {
+                // إذا كان رقماً مباشراً موجوداً كملف واحد
+                let path = githubAudioBaseUrl + num + '.mp3';
+                await playAudioFile(path);
+                return;
+            }
+
+            // تحليل الأرقام المركبة (مثلاً مئات وعشرات وآحاد)
+            let hundreds = Math.floor(num / 100) * 100;
+            let remainder = num % 100;
+            let tens = Math.floor(remainder / 10) * 10;
+            let units = remainder % 10;
+
+            let parts = [];
+            if (hundreds > 0) parts.push(hundreds);
+            
+            if (tens > 0 && units > 0) {
+                parts.push(units);
+                parts.push('wa');
+                parts.push(tens);
+            } else {
+                if (tens > 0) parts.push(tens);
+                if (units > 0) parts.push(units);
+            }
+
+            for (let part of parts) {
+                await playAudioFile(githubAudioBaseUrl + part + '.mp3');
+                await new Promise(r => setTimeout(r, 60));
+            }
+        }
+
         async function processQueue() {
             if (isCalling || callQueue.length === 0) return;
 
@@ -389,16 +396,27 @@
             const data = callQueue.shift();
 
             try {
-                // 1) تشغيل نغمة المطار التنبيهية
-                await playAudioFile('https://github.com/blu2ris-create/clinic-queue-system/raw/refs/heads/main/mixkit-melodic-airport-announcement-ding-1570.mp3');
-                
-                await new Promise(r => setTimeout(r, 300));
+                // 1) نغمة التنبيه
+                await playAudioFile(githubAudioBaseUrl + 'ding.mp3');
+                await new Promise(r => setTimeout(r, 200));
 
-                // 2) نطق النداء بالصوت باستخدام محرك السحابة المباشر (يتجاوز قيود شاشة LG بصوت بشري واضح)
-                const fullAnnouncement = `يرجى من المراجع رقم ${data.name} التوجه إلى ${data.clinic}`;
-                await speakViaCloudAPI(fullAnnouncement);
+                // 2) عبارة "يرجى من المراجع رقم"
+                await playAudioFile(githubAudioBaseUrl + 'please_wait.mp3');
+                await new Promise(r => setTimeout(r, 150));
 
-                // 3) تحديث الشاشة الرئيسية بصرياً
+                // 3) تشغيل الرقم بالترتيب الذكي (مع ربط حرف الواو تلقائياً)
+                await playNumberSequence(data.name);
+                await new Promise(r => setTimeout(r, 150));
+
+                // 4) عبارة "التوجه إلى"
+                await playAudioFile(githubAudioBaseUrl + 'goto.mp3');
+                await new Promise(r => setTimeout(r, 150));
+
+                // 5) تشغيل العيادة المحددة
+                let clinicFile = clinicAudioMap[data.clinic] || 'family.mp3';
+                await playAudioFile(githubAudioBaseUrl + clinicFile);
+
+                // تحديث واجهة الشاشة
                 document.getElementById('mainPatient').innerText = data.name;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinic}`;
 
