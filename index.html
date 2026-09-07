@@ -193,7 +193,6 @@
         let callQueue = [];
         let isAdminLoggedIn = false;
 
-        // الرابط الصحيح لمستودع النغمات الظاهر في صورك
         const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/";
 
         const clinicAudioMap = {
@@ -304,24 +303,32 @@
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
 
+            // تفعيل صوت تجريبي فوري لكسر قفل الحظر التلقائي بالمتصفح
             try {
-                // النغمة موجودة داخل مجلد audio كما يظهر في صورتك الأولى
                 const initAudio = new Audio(githubAudioBaseUrl + "audio/ding.mp3");
+                initAudio.volume = 0.01;
                 await initAudio.play();
                 initAudio.pause();
             } catch (e) {}
         }
 
+        // دالة محسنة لتشغيل ملفات الصوت مع ضمان التحميل الكامل قبل التشغيل
         function playAudioFile(fileName) {
             return new Promise((resolve) => {
                 let url = githubAudioBaseUrl + fileName;
-                const audio = new Audio(url);
+                const audio = new Audio();
+                audio.src = url;
+                audio.preload = 'auto';
                 audio.volume = 1.0;
+                
                 audio.onended = () => resolve();
                 audio.onerror = () => {
-                    resolve(); 
+                    resolve(); // تجاوز الملف بهدوء لو حصل أي خطأ بالتحميل لتلافي توقف الطابور
                 };
-                audio.play().catch(() => resolve());
+
+                audio.play().catch(() => {
+                    resolve();
+                });
             });
         }
 
@@ -389,7 +396,7 @@
 
             for (let part of parts) {
                 await playAudioFile(part);
-                await new Promise(r => setTimeout(r, 805));
+                await new Promise(r => setTimeout(r, 200)); // الفاصل الزمني البسيط بين الأرقام
             }
         }
 
@@ -400,23 +407,23 @@
             const data = callQueue.shift();
 
             try {
-                // 1) نغمة التنبيه من مجلد audio
+                // 1) نغمة التنبيه
                 await playAudioFile('audio/ding.mp3');
+                await new Promise(r => setTimeout(r, 400));
+
+                // 2) يرجى من المراجع رقم
+                await playAudioFile('please_wait.mp3');
                 await new Promise(r => setTimeout(r, 300));
 
-                // 2) عبارة "يرجى من المراجع رقم" المطابقة لاسم الملف عندك (please_wait.mp3)
-                await playAudioFile('please_wait.mp3');
-                await new Promise(r => setTimeout(r, 200));
-
-                // 3) نطق الأرقام بالملفات الإنجليزية المطابقة (1.mp3, 50.mp3 ... إلخ)
+                // 3) قراءة الأرقام بالتسلسل
                 await playNumberSequence(data.name);
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 300));
 
-                // 4) عبارة "التوجه إلى" المطابقة لاسم الملف (goto.mp3)
+                // 4) التوجه إلى
                 await playAudioFile('goto.mp3');
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 300));
 
-                // 5) تشغيل العيادة المحددة من الخريطة
+                // 5) العيادة المستهدفة
                 let clinicFile = clinicAudioMap[data.clinic] || 'family.mp3';
                 await playAudioFile(clinicFile);
 
