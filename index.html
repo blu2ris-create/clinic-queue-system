@@ -194,6 +194,9 @@
         let isAdminLoggedIn = false;
 
         const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/";
+        
+        // 🔔 رابط النغمة الأساسي المباشر السليم
+        const chimeAudioUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/audio/ding.mp3";
 
         const clinicAudioMap = {
             "عيادة طب الأسرة رقم 1": "family.mp3",
@@ -304,7 +307,7 @@
             requestFullscreen();
 
             try {
-                const initAudio = new Audio(githubAudioBaseUrl + 'ding.mp3');
+                const initAudio = new Audio(chimeAudioUrl);
                 await initAudio.play();
                 initAudio.pause();
             } catch (e) {}
@@ -362,7 +365,7 @@
             let tens = Math.floor(remainder / 10) * 10;
             let units = remainder % 10;
 
-            // 1) إضافة المئات (إن وجدت، مثل 100, 200...)
+            // 1) إضافة المئات
             if (hundreds > 0) {
                 parts.push(hundreds.toString());
             }
@@ -374,26 +377,22 @@
                 }
 
                 if (remainder <= 20 || units === 0) {
-                    // الأرقام التحت 20 أو العشرات الصريحة (مثل 10, 20, 50)
                     parts.push(remainder.toString());
                 } else {
-                    // الأرقام المركبة مثل 51 (تصبح: 1 + و + 50)
                     parts.push(units.toString());
                     parts.push('wa');
                     parts.push(tens.toString());
                 }
             }
 
-            // إذا كان الرقم صفر أو غير ذلك
             if (parts.length === 0) {
                 parts.push('0');
             }
 
-            // تشغيل الملفات الصوتية متتالية بالترتيب الصحيح
             for (let part of parts) {
                 let fileUrl = githubAudioBaseUrl + part + '.mp3';
                 await playAudioFile(fileUrl);
-                await new Promise(r => setTimeout(r, 805)); // فاصل زمني قصير وناعم بين الكلمات
+                await new Promise(r => setTimeout(r, 805));
             }
         }
 
@@ -404,15 +403,15 @@
             const data = callQueue.shift();
 
             try {
-                // 1) نغمة التنبيه
-                await playAudioFile(githubAudioBaseUrl + 'ding.mp3');
+                // 1) نغمة التنبيه المباشرة
+                await playAudioFile(chimeAudioUrl);
                 await new Promise(r => setTimeout(r, 300));
 
                 // 2) عبارة "يرجى من المراجع رقم"
                 await playAudioFile(githubAudioBaseUrl + 'please_wait.mp3');
                 await new Promise(r => setTimeout(r, 200));
 
-                // 3) تشغيل الرقم بالتركيب الذكي (مثلاً 51 ينطق: واحد + و + خمسون)
+                // 3) تشغيل الرقم بالتركيب الذكي
                 await playNumberSequence(data.name);
                 await new Promise(r => setTimeout(r, 200));
 
