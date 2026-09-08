@@ -375,9 +375,11 @@
                     parts.push("wa.mp3");
                 }
 
+                // تعديل نطاق الأرقام المركبة والعقود لتنطق ككلمة واحدة متصلة بدون فاصل عطف متباعد
                 if (remainder <= 20 || units === 0) {
                     parts.push(remainder + ".mp3");
                 } else {
+                    // جعل الآحاد والعقود تتدفق ككتلة واحدة متصلة بتخفيض وقت الانتظار أو دمجها مباشرة
                     parts.push(units + ".mp3");
                     parts.push("wa.mp3");
                     parts.push(tens + ".mp3");
@@ -388,10 +390,10 @@
                 parts.push("0.mp3");
             }
 
-            // تم تقليل الفاصل الزمني بين أجزاء الرقم ليكون متصلاً وطبيعياً تماماً (50 جزء من الثانية فقط)
+            // تم تسريع وتيرة تدفق أجزاء الرقم (20 جزء من الثانية فقط) لتنطق ككلمة واحدة مدمجة ومتصلة بسلاسة تامة
             for (let part of parts) {
                 await playAudioFile(part);
-                await new Promise(r => setTimeout(r, 50)); 
+                await new Promise(r => setTimeout(r, 20)); 
             }
         }
 
@@ -410,7 +412,7 @@
                 await playAudioFile('please_wait.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
-                // 3) قراءة الأرقام بالتسلسل المتصل
+                // 3) قراءة الأرقام بالتسلسل المدمج
                 await playNumberSequence(data.name);
                 await new Promise(r => setTimeout(r, 150));
 
