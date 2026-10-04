@@ -208,13 +208,13 @@
             let stored = localStorage.getItem('umran_clinics_map');
             if (stored) return JSON.parse(stored);
 
-            // ربط العيادات بملفات الصوت مباشرة (من 1 إلى 500)
+            // ربط أسماء العيادات بأسماء ملفات الصوت المرفوعة (مثل dental.1, dental.2, إلخ)
             const defaultClinicsMap = {
-                "عيادة الأسنان 1": "10.mp3",
-                "عيادة الأسنان 2": "11.mp3",
-                "عيادة طب الأسرة": "12.mp3",
-                "غرفة سحب الدم": "13.mp3",
-                "عيادة التطعيم": "14.mp3"
+                "عيادة الأسنان 1": "dental.1.mp3",
+                "عيادة الأسنان 2": "dental.2.mp3",
+                "عيادة طب الأسرة": "family.1.mp3",
+                "غرفة سحب الدم": "lab.1.mp3",
+                "عيادة التطعيم": "vaccine.1.mp3"
             };
             return defaultClinicsMap;
         }
@@ -335,7 +335,7 @@
             requestFullscreen();
 
             try {
-                globalAudio.src = voicesBaseUrl + "1.mp3";
+                globalAudio.src = voicesBaseUrl + "ding.mp3";
                 globalAudio.volume = 0.01;
                 await globalAudio.play();
                 globalAudio.pause();
@@ -384,7 +384,7 @@
             const clinicSelect = document.getElementById('clinicSelect');
             const clinicName = clinicSelect.value;
             const clinicsMap = getClinicsMap();
-            const clinicAudioFile = clinicsMap[clinicName] || '1.mp3';
+            const clinicAudioFile = clinicsMap[clinicName] || 'dental.1.mp3';
 
             if (!patientNum) {
                 alert('الرجاء إدخال رقم المراجع');
@@ -421,9 +421,17 @@
             const data = callQueue.shift();
 
             try {
-                // تشغيل ملف رقم المراجع ثم ملف العيادة مباشرة
+                // الترتيب الصوتي الدقيق المطلوب:
+                // 1. نغمة التنبيه (ding.mp3)
+                // 2. يرجى من المراجع رقم (patient.mp3)
+                // 3. رقم المراجع (مثل 46.mp3)
+                // 4. التوجه إلى (to.mp3)
+                // 5. اسم ملف العيادة (مثل dental.1.mp3)
                 const sequence = [
+                    "ding.mp3",
+                    "patient.mp3",
                     data.patientAudioFile,
+                    "to.mp3",
                     data.clinicAudioFile
                 ];
 
@@ -510,10 +518,10 @@
 
             let clinicsMap = getClinicsMap();
             let cName = prompt("أدخل اسم العيادة المعروض على الشاشة:", val);
-            let cFileNum = prompt("أدخل رقم ملف الصوت للعيادة (مثال: 20):", "15");
+            let cFileName = prompt("أدخل اسم ملف الصوت للعيادة (مثال: dental.3.mp3):", "dental.1.mp3");
 
-            if (cName && cFileNum) {
-                clinicsMap[cName] = cFileNum.trim() + ".mp3";
+            if (cName && cFileName) {
+                clinicsMap[cName] = cFileName.trim();
                 saveClinicsMap(clinicsMap);
                 input.value = '';
             }
@@ -521,10 +529,10 @@
 
         function editClinicFile(clinicKey) {
             let clinicsMap = getClinicsMap();
-            let currentFileNum = clinicsMap[clinicKey].replace('.mp3', '');
-            let newFileNum = prompt(`أدخل رقم ملف الصوت الجديد لـ (${clinicKey}) (من 1 إلى 500):`, currentFileNum);
-            if (newFileNum) {
-                clinicsMap[clinicKey] = newFileNum.trim() + ".mp3";
+            let currentFileName = clinicsMap[clinicKey];
+            let newFileName = prompt(`أدخل اسم ملف الصوت الجديد لـ (${clinicKey}) (مثل dental.2.mp3):`, currentFileName);
+            if (newFileName) {
+                clinicsMap[clinicKey] = newFileName.trim();
                 saveClinicsMap(clinicsMap);
                 alert('تم تحديث ملف الصوت للعيادة بنجاح!');
             }
