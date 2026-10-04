@@ -137,7 +137,7 @@
         </div>
 
         <div class="mb-4">
-            <label class="form-label">اختر العيادة / الغرفة:</label>
+            <label class="form-label">اختر العيادة / القسم:</label>
             <select id="clinicSelect" class="form-select"></select>
         </div>
 
@@ -200,20 +200,33 @@
 
         const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
 
-        const defaultClinicsMap = {
-            "عيادة طب الأسرة 1": "family1.mp3",
-            "عيادة الأسنان 1": "dental1.mp3",
-            "عيادة الأسنان 2": "dental2.mp3",
-            "عيادة متابعة الحوامل": "pregnancy.mp3",
-            "عيادة العلامات الحيوية": "vitals.mp3",
-            "عيادة المدرب الصحي": "coach.mp3",
-            "غرفة سحب الدم": "lab.mp3",
-            "عيادة التطعيم": "vaccine.mp3"
-        };
+        const globalAudio = new Audio();
+        globalAudio.preload = 'auto';
+        globalAudio.volume = 1.0;
 
         function getClinicsMap() {
             let stored = localStorage.getItem('umran_clinics_map');
-            return stored ? JSON.parse(stored) : defaultClinicsMap;
+            if (stored) return JSON.parse(stored);
+
+            const defaultClinicsMap = {};
+            
+            for (let i = 1; i <= 15; i++) {
+                defaultClinicsMap[`عيادة الأسنان ${i}`] = `dental.${i}.mp3`;
+            }
+
+            for (let i = 1; i <= 15; i++) {
+                defaultClinicsMap[`عيادة طب الأسرة ${i}`] = `family.${i}.mp3`;
+            }
+
+            defaultClinicsMap["عيادة متابعة الحوامل"] = "pregnancy.mp3";
+            defaultClinicsMap["عيادة العلامات الحيوية"] = "vitals.mp3";
+            defaultClinicsMap["عيادة المدرب الصحي"] = "coach.mp3";
+            defaultClinicsMap["غرفة سحب الدم"] = "lab.mp3";
+            defaultClinicsMap["عيادة التطعيم"] = "vaccine.mp3";
+            defaultClinicsMap["عيادة الجروح"] = "Wound.mp3";
+            defaultClinicsMap["قسم الأشعة"] = "Xray.mp3";
+
+            return defaultClinicsMap;
         }
 
         function saveClinicsMap(map) {
@@ -329,34 +342,45 @@
             requestFullscreen();
 
             try {
-                const initAudio = new Audio(voicesBaseUrl + "ding.mp3");
-                initAudio.volume = 0.01;
-                await initAudio.play();
-                initAudio.pause();
+                globalAudio.src = voicesBaseUrl + "ding.mp3";
+                globalAudio.volume = 0.01;
+                await globalAudio.play();
+                globalAudio.pause();
+                globalAudio.volume = 1.0;
             } catch (e) {}
         }
 
-        // دالة تشغيل صوت واحد تضمن عدم حدوث تداخل وانتهاء الصوت بالكامل
-        function playSingleAudio(fileName) {
+        function playAudioSequence(fileList) {
             return new Promise((resolve) => {
-                const audio = new Audio(voicesBaseUrl + fileName);
-                audio.preload = 'auto';
-                audio.volume = 1.0;
+                let index = 0;
 
-                // إذا انتهى الصوت بنجاح، انتقل للخطوة التالية فوراً
-                audio.onended = () => {
-                    resolve();
-                };
+                function playNext() {
+                    if (index >= fileList.length) {
+                        resolve();
+                        return;
+                    }
 
-                // إذا حدث أي خطأ (مثل ملف غير موجود)، تجاوز الخطأ حتى لا يتوقف النظام بالكامل
-                audio.onerror = () => {
-                    console.warn("تعذر تشغيل الملف الصوتي: " + fileName);
-                    resolve();
-                };
+                    const fileName = fileList[index];
+                    index++;
 
-                audio.play().catch(() => {
-                    resolve();
-                });
+                    globalAudio.src = voicesBaseUrl + fileName;
+                    globalAudio.load();
+
+                    globalAudio.onended = () => {
+                        playNext();
+                    };
+
+                    globalAudio.onerror = () => {
+                        console.warn("تخطي ملف صوتي غير موجود: " + fileName);
+                        playNext();
+                    };
+
+                    globalAudio.play().catch(() => {
+                        playNext();
+                    });
+                }
+
+                playNext();
             });
         }
 
@@ -366,7 +390,7 @@
             const clinicSelect = document.getElementById('clinicSelect');
             const clinicName = clinicSelect.value;
             const clinicsMap = getClinicsMap();
-            const clinicAudioFile = clinicsMap[clinicName] || 'family1.mp3';
+            const clinicAudioFile = clinicsMap[clinicName] || 'family.1.mp3';
 
             if (!name || isNaN(name) || parseInt(name) < 1 || parseInt(name) > 500) {
                 alert('الرجاء إدخال رقم مراجع صحيح من 1 إلى 500');
@@ -395,7 +419,6 @@
             nameInput.focus();
         }
 
-        // دالة النداء الآلي المحدثة التي تربط الملفات تسلسلياً بناءً على الحدث (onended) بدون تأخير مصطنع أو انقطاع
         async function processQueue() {
             if (isCalling || callQueue.length === 0) return;
 
@@ -403,22 +426,16 @@
             const data = callQueue.shift();
 
             try {
-                // 1) نغمة التنبيه
-                await playSingleAudio('ding.mp3');
+                // الترتيب المطلوب بدقة: ding ⬅️ رقم المراجع ⬅️ goto (التوجه إلى) ⬅️ اسم العيادة
+                const sequence = [
+                    'ding.mp3',
+                    data.name + '.mp3',
+                    'goto.mp3',
+                    data.clinicAudio
+                ];
 
-                // 2) يرجى من المراجع رقم
-                await playSingleAudio('please_wait.mp3');
+                await playAudioSequence(sequence);
 
-                // 3) رقم المراجع (مباشرة بعد جملة يرجى من المراجع رقم)
-                await playSingleAudio(data.name + ".mp3");
-
-                // 4) التوجه إلى
-                await playSingleAudio('goto.mp3');
-
-                // 5) اسم العيادة برقمها المباشر
-                await playSingleAudio(data.clinicAudio);
-
-                // تحديث الشاشة والأرشيف بعد انتهاء الصوت بالكامل
                 document.getElementById('mainPatient').innerText = data.name;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
 
@@ -500,7 +517,7 @@
 
             let clinicsMap = getClinicsMap();
             let cName = prompt("أدخل اسم العيادة المعروض على الشاشة:", val);
-            let cFile = prompt("أدخل اسم ملف الصوت بدقة في مجلد voices (مثال: dental1.mp3 أو family2.mp3):", "dental1.mp3");
+            let cFile = prompt("أدخل اسم ملف الصوت بدقة في مجلد voices:", "family.16.mp3");
 
             if (cName && cFile) {
                 clinicsMap[cName] = cFile;
