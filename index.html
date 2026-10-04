@@ -132,8 +132,8 @@
         <p class="text-center text-muted small mb-4">مركز صحي الصالحية للرعاية الأولية</p>
         
         <div class="mb-3">
-            <label class="form-label">رقم المراجع (مثال: 101):</label>
-            <input type="number" id="patientNumberInput" class="form-control" placeholder="أدخل رقم المراجع..." min="1" max="500" autocomplete="off">
+            <label class="form-label">رقم المراجع (مثال: 46):</label>
+            <input type="number" id="patientNumberInput" class="form-control" placeholder="أدخل رقم المراجع..." min="1" max="999" autocomplete="off">
         </div>
 
         <div class="mb-4">
@@ -159,12 +159,12 @@
                 <div class="mb-3">
                     <label class="form-label small">إضافة عيادة جديدة:</label>
                     <div class="input-group">
-                        <input type="text" id="newClinicName" class="form-control" placeholder="اسم العيادة...">
+                        <input type="text" id="newClinicName" class="form-control" placeholder="اسم العيادة المعروض...">
                         <button class="btn btn-success" onclick="addClinic()">إضافة</button>
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small">إدارة ملفات العيادات:</label>
+                    <label class="form-label small">إدارة ملفات العيادات الصوتية:</label>
                     <div id="clinicsTagsList" class="clinics-scroll-box d-flex flex-column gap-1"></div>
                 </div>
                 <div class="border-top border-secondary pt-2 mt-2">
@@ -199,7 +199,6 @@
         let lastProcessedId = parseInt(localStorage.getItem('umran_last_processed_id') || '0');
 
         const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
-
         const globalAudio = new Audio();
         globalAudio.preload = 'auto';
         globalAudio.volume = 1.0;
@@ -209,11 +208,8 @@
             if (stored) return JSON.parse(stored);
 
             const defaultClinicsMap = {
-                "عيادة الأسنان 1": "dental.1.mp3",
-                "عيادة الأسنان 2": "dental.2.mp3",
-                "عيادة طب الأسرة": "family.1.mp3",
-                "غرفة سحب الدم": "lab.1.mp3",
-                "عيادة التطعيم": "vaccine.1.mp3"
+                "غرفة سحب الدم": "lab.mp3",
+                "عيادة طب الأسنان": "dental.mp3"
             };
             return defaultClinicsMap;
         }
@@ -342,39 +338,24 @@
             } catch (e) {}
         }
 
-        // دالة تشغيل صوتية مبنية على Promise موثوقة تماماً ومزودة بتتبع الأخطاء
         function playSingleAudio(fileName) {
             return new Promise((resolve) => {
                 const fullUrl = voicesBaseUrl + fileName;
-                console.log("محاولة تشغيل الصوت: " + fullUrl);
-                
                 globalAudio.src = fullUrl;
                 globalAudio.load();
 
-                let isFinished = false;
-
-                function cleanAndResolve() {
-                    if (isFinished) return;
-                    isFinished = true;
+                let finished = false;
+                function done() {
+                    if (finished) return;
+                    finished = true;
                     globalAudio.onended = null;
                     globalAudio.onerror = null;
                     resolve();
                 }
 
-                globalAudio.onended = () => {
-                    console.log("انتهى تشغيل: " + fileName);
-                    cleanAndResolve();
-                };
-
-                globalAudio.onerror = (e) => {
-                    console.warn("خطأ في ملف الصوت أو غير موجود (تخطي): " + fileName, e);
-                    cleanAndResolve();
-                };
-
-                globalAudio.play().catch((err) => {
-                    console.warn("فشل التشغيل المباشر لـ: " + fileName, err);
-                    cleanAndResolve();
-                });
+                globalAudio.onended = done;
+                globalAudio.onerror = () => done();
+                globalAudio.play().catch(() => done());
             });
         }
 
@@ -391,7 +372,7 @@
             const clinicSelect = document.getElementById('clinicSelect');
             const clinicName = clinicSelect.value;
             const clinicsMap = getClinicsMap();
-            const clinicAudioFile = clinicsMap[clinicName] || 'dental.1.mp3';
+            const clinicAudioFile = clinicsMap[clinicName] || 'lab.mp3';
 
             if (!patientNum) {
                 alert('الرجاء إدخال رقم المراجع');
@@ -428,17 +409,17 @@
             const data = callQueue.shift();
 
             try {
-                // التسلسل الصوتي الكامل بالترتيب:
-                // 1. نغمة التنبيه (ding.mp3)
-                // 2. جملة يرجى من المراجع رقم (patient.mp3)
-                // 3. رقم المراجع (مثل 46.mp3)
-                // 4. جملة التوجه إلى (to.mp3)
-                // 5. ملف العيادة (مثل dental.1.mp3)
+                // التسلسل الصوتي المتطابق مع ملفاتك الفعلية في GitHub:
+                // 1. ding.mp3 (نغمة التنبيه)
+                // 2. please_wait.mp3 (يرجى من المراجع رقم)
+                // 3. [رقم المراجع].mp3 (رقم المراجع مثل 46.mp3)
+                // 4. goto.mp3 (التوجه إلى)
+                // 5. [ملف العيادة].mp3 (مثل lab.mp3)
                 const sequence = [
                     "ding.mp3",
-                    "patient.mp3",
+                    "please_wait.mp3",
                     data.patientAudioFile,
-                    "to.mp3",
+                    "goto.mp3",
                     data.clinicAudioFile
                 ];
 
@@ -525,7 +506,7 @@
 
             let clinicsMap = getClinicsMap();
             let cName = prompt("أدخل اسم العيادة المعروض على الشاشة:", val);
-            let cFileName = prompt("أدخل اسم ملف الصوت للعيادة (مثال: dental.3.mp3):", "dental.1.mp3");
+            let cFileName = prompt("أدخل اسم ملف الصوت المرفوع (مثل dental.mp3):", "lab.mp3");
 
             if (cName && cFileName) {
                 clinicsMap[cName] = cFileName.trim();
@@ -537,11 +518,11 @@
         function editClinicFile(clinicKey) {
             let clinicsMap = getClinicsMap();
             let currentFileName = clinicsMap[clinicKey];
-            let newFileName = prompt(`أدخل اسم ملف الصوت الجديد لـ (${clinicKey}) (مثل dental.2.mp3):`, currentFileName);
+            let newFileName = prompt(`أدخل اسم ملف الصوت الجديد لـ (${clinicKey}):`, currentFileName);
             if (newFileName) {
                 clinicsMap[clinicKey] = newFileName.trim();
                 saveClinicsMap(clinicsMap);
-                alert('تم تحديث ملف الصوت للعيادة بنجاح!');
+                alert('تم تحديث اسم ملف الصوت للعيادة بنجاح!');
             }
         }
 
