@@ -196,13 +196,13 @@
         const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/";
 
         const clinicAudioMap = {
-            "عيادة طب الأسرة رقم 1": "family.mp3",
-            "عيادة الأسنان رقم 1": "dental.mp3",
-            "عيادة متابعة الحوامل": "pregnancy.mp3",
-            "عيادة العلامات الحيوية": "vitals.mp3",
-            "عيادة المدرب الصحي": "coach.mp3",
-            "غرفة سحب الدم": "lab.mp3",
-            "عيادة التطعيم": "vaccine.mp3"
+            "عيادة طب الأسرة رقم 1": "voices/family.mp3",
+            "عيادة الأسنان رقم 1": "voices/dental.mp3",
+            "عيادة متابعة الحوامل": "voices/pregnancy.mp3",
+            "عيادة العلامات الحيوية": "voices/vitals.mp3",
+            "عيادة المدرب الصحي": "voices/coach.mp3",
+            "غرفة سحب الدم": "voices/lab.mp3",
+            "عيادة التطعيم": "voices/vaccine.mp3"
         };
 
         const defaultClinics = Object.keys(clinicAudioMap);
@@ -304,7 +304,7 @@
             requestFullscreen();
 
             try {
-                const initAudio = new Audio(githubAudioBaseUrl + "audio/ding.mp3");
+                const initAudio = new Audio(githubAudioBaseUrl + "ding.mp3");
                 initAudio.volume = 0.01;
                 await initAudio.play();
                 initAudio.pause();
@@ -356,7 +356,7 @@
         async function playNumberSequence(numStr) {
             let num = parseInt(numStr);
             if (isNaN(num)) {
-                await playAudioFile(numStr + ".mp3");
+                await playAudioFile("voices/" + numStr + ".mp3");
                 return;
             }
 
@@ -367,30 +367,27 @@
             let units = remainder % 10;
 
             if (hundreds > 0) {
-                parts.push(hundreds + ".mp3");
+                parts.push("voices/" + hundreds + ".mp3");
             }
 
             if (remainder > 0) {
                 if (hundreds > 0) {
-                    parts.push("wa.mp3");
+                    parts.push("voices/wa.mp3");
                 }
 
-                // تعديل نطاق الأرقام المركبة والعقود لتنطق ككلمة واحدة متصلة بدون فاصل عطف متباعد
                 if (remainder <= 20 || units === 0) {
-                    parts.push(remainder + ".mp3");
+                    parts.push("voices/" + remainder + ".mp3");
                 } else {
-                    // جعل الآحاد والعقود تتدفق ككتلة واحدة متصلة بتخفيض وقت الانتظار أو دمجها مباشرة
-                    parts.push(units + ".mp3");
-                    parts.push("wa.mp3");
-                    parts.push(tens + ".mp3");
+                    parts.push("voices/" + units + ".mp3");
+                    parts.push("voices/wa.mp3");
+                    parts.push("voices/" + tens + ".mp3");
                 }
             }
 
             if (parts.length === 0) {
-                parts.push("0.mp3");
+                parts.push("voices/0.mp3");
             }
 
-            // تم تسريع وتيرة تدفق أجزاء الرقم (20 جزء من الثانية فقط) لتنطق ككلمة واحدة مدمجة ومتصلة بسلاسة تامة
             for (let part of parts) {
                 await playAudioFile(part);
                 await new Promise(r => setTimeout(r, 20)); 
@@ -404,12 +401,12 @@
             const data = callQueue.shift();
 
             try {
-                // 1) نغمة التنبيه
-                await playAudioFile('audio/ding.mp3');
+                // 1) نغمة التنبيه (في المجلد الرئيسي مباشرة)
+                await playAudioFile('ding.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
                 // 2) يرجى من المراجع رقم
-                await playAudioFile('please_wait.mp3');
+                await playAudioFile('voices/please_wait.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
                 // 3) قراءة الأرقام بالتسلسل المدمج
@@ -417,11 +414,11 @@
                 await new Promise(r => setTimeout(r, 150));
 
                 // 4) التوجه إلى
-                await playAudioFile('goto.mp3');
+                await playAudioFile('voices/goto.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
-                // 5) العيادة المستهدفة
-                let clinicFile = clinicAudioMap[data.clinic] || 'family.mp3';
+                // 5) العيادة المستهدفة (تأخذ المسار الصحيح voices/)
+                let clinicFile = clinicAudioMap[data.clinic] || 'voices/family.mp3';
                 await playAudioFile(clinicFile);
 
                 document.getElementById('mainPatient').innerText = data.name;
