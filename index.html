@@ -207,7 +207,7 @@
             "عيادة العلامات الحيوية": "voices/vitals.mp3",
             "عيادة المدرب الصحي": "voices/coach.mp3",
             "غرفة سحب الدم": "voices/lab.mp3",
-            "عيادة التطعيم": "voices/vaccine.mp3"
+            "عيادة التطعيم": "voices/voices/vaccine.mp3"
         };
 
         const defaultClinics = Object.keys(clinicAudioMap);
@@ -273,7 +273,6 @@
                 }
             });
 
-            // نظام تتبع التخزين المحلي الاحتياطي لضمان عمل الشاشة فوراً
             window.addEventListener('storage', (event) => {
                 if (event.key === 'umran_latest_call_event' && isScreenActive) {
                     try {
@@ -330,7 +329,7 @@
             requestFullscreen();
 
             try {
-                const initAudio = new Audio(githubAudioBaseUrl + "ding.mp3");
+                const initAudio = new Audio(githubAudioBaseUrl + "voices/ding.mp3");
                 initAudio.volume = 0.01;
                 await initAudio.play();
                 initAudio.pause();
@@ -369,12 +368,10 @@
                 clinic: clinic
             };
 
-            // إرسال عبر MQTT
             if (client && client.connected) {
                 client.publish(uniqueTopic, JSON.stringify(callData));
             }
 
-            // إرسال عبر التخزين المحلي كبديل فوري مضمون 100%
             localStorage.setItem('umran_latest_call_event', JSON.stringify(callData));
 
             const msg = document.getElementById('successMsg');
@@ -433,15 +430,15 @@
             const data = callQueue.shift();
 
             try {
-                // 1) نغمة التنبيه (في المجلد الرئيسي مباشرة)
-                await playAudioFile('ding.mp3');
+                // 1) نغمة التنبيه من مجلد voices/
+                await playAudioFile('voices/ding.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
                 // 2) يرجى من المراجع رقم
                 await playAudioFile('voices/please_wait.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
-                // 3) قراءة الأرقام بالتسلسل المدمج
+                // 3) قراءة الأرقام من مجلد voices/
                 await playNumberSequence(data.name);
                 await new Promise(r => setTimeout(r, 150));
 
@@ -449,7 +446,7 @@
                 await playAudioFile('voices/goto.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
-                // 5) العيادة المستهدفة
+                // 5) العيادة المستهدفة من مجلد voices/
                 let clinicFile = clinicAudioMap[data.clinic] || 'voices/family.mp3';
                 await playAudioFile(clinicFile);
 
