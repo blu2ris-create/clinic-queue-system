@@ -126,7 +126,7 @@
     </div>
 
     <div id="controlScreen" style="display: none;">
-        <button id="adminToggleBtn" class="admin-gear-btn" onclick="toggleAdminPanel()" title="إعدادات الأدمن">⚙️</button>
+        <button id="adminToggleBtn" class="admin-gear-btn" onclick="toggleAdminPanel()" title="إعدادات الأدمن">⚙️️</button>
         
         <h3 class="text-center mb-1 text-warning fw-bold pt-2">لوحة تحكم النداء الآلي</h3>
         <p class="text-center text-muted small mb-4">مركز صحي الصالحية للرعاية الأولية</p>
@@ -198,16 +198,17 @@
         let isAdminLoggedIn = false;
         let lastProcessedId = parseInt(localStorage.getItem('umran_last_processed_id') || '0');
 
-        const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/";
+        // رابط مجلد voices مباشرة
+        const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
 
         const clinicAudioMap = {
-            "عيادة طب الأسرة رقم 1": "voices/family.mp3",
-            "عيادة الأسنان رقم 1": "voices/dental.mp3",
-            "عيادة متابعة الحوامل": "voices/pregnancy.mp3",
-            "عيادة العلامات الحيوية": "voices/vitals.mp3",
-            "عيادة المدرب الصحي": "voices/coach.mp3",
-            "غرفة سحب الدم": "voices/lab.mp3",
-            "عيادة التطعيم": "voices/voices/vaccine.mp3"
+            "عيادة طب الأسرة رقم 1": "family.mp3",
+            "عيادة الأسنان رقم 1": "dental.mp3",
+            "عيادة متابعة الحوامل": "pregnancy.mp3",
+            "عيادة العلامات الحيوية": "vitals.mp3",
+            "عيادة المدرب الصحي": "coach.mp3",
+            "غرفة سحب الدم": "lab.mp3",
+            "عيادة التطعيم": "vaccine.mp3"
         };
 
         const defaultClinics = Object.keys(clinicAudioMap);
@@ -329,7 +330,7 @@
             requestFullscreen();
 
             try {
-                const initAudio = new Audio(githubAudioBaseUrl + "voices/ding.mp3");
+                const initAudio = new Audio(voicesBaseUrl + "ding.mp3");
                 initAudio.volume = 0.01;
                 await initAudio.play();
                 initAudio.pause();
@@ -338,7 +339,7 @@
 
         function playAudioFile(fileName) {
             return new Promise((resolve) => {
-                let url = githubAudioBaseUrl + fileName;
+                let url = voicesBaseUrl + fileName;
                 const audio = new Audio();
                 audio.src = url;
                 audio.preload = 'auto';
@@ -385,7 +386,7 @@
         async function playNumberSequence(numStr) {
             let num = parseInt(numStr);
             if (isNaN(num)) {
-                await playAudioFile("voices/" + numStr + ".mp3");
+                await playAudioFile(numStr + ".mp3");
                 return;
             }
 
@@ -396,25 +397,25 @@
             let units = remainder % 10;
 
             if (hundreds > 0) {
-                parts.push("voices/" + hundreds + ".mp3");
+                parts.push(hundreds + ".mp3");
             }
 
             if (remainder > 0) {
                 if (hundreds > 0) {
-                    parts.push("voices/wa.mp3");
+                    parts.push("wa.mp3");
                 }
 
                 if (remainder <= 20 || units === 0) {
-                    parts.push("voices/" + remainder + ".mp3");
+                    parts.push(remainder + ".mp3");
                 } else {
-                    parts.push("voices/" + units + ".mp3");
-                    parts.push("voices/wa.mp3");
-                    parts.push("voices/" + tens + ".mp3");
+                    parts.push(units + ".mp3");
+                    parts.push("wa.mp3");
+                    parts.push(tens + ".mp3");
                 }
             }
 
             if (parts.length === 0) {
-                parts.push("voices/0.mp3");
+                parts.push("0.mp3");
             }
 
             for (let part of parts) {
@@ -430,24 +431,24 @@
             const data = callQueue.shift();
 
             try {
-                // 1) نغمة التنبيه من مجلد voices/
-                await playAudioFile('voices/ding.mp3');
+                // 1) نغمة التنبيه (ding.mp3)
+                await playAudioFile('ding.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
-                // 2) يرجى من المراجع رقم
-                await playAudioFile('voices/please_wait.mp3');
+                // 2) يرجى من المراجع رقم (please_wait.mp3)
+                await playAudioFile('please_wait.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
-                // 3) قراءة الأرقام من مجلد voices/
+                // 3) قراءة أرقام المراجع بالتسلسل من مجلد فويس
                 await playNumberSequence(data.name);
                 await new Promise(r => setTimeout(r, 150));
 
-                // 4) التوجه إلى
-                await playAudioFile('voices/goto.mp3');
+                // 4) التوجه إلى (goto.mp3)
+                await playAudioFile('goto.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
-                // 5) العيادة المستهدفة من مجلد voices/
-                let clinicFile = clinicAudioMap[data.clinic] || 'voices/family.mp3';
+                // 5) اسم العيادة من القائمة المخصصة
+                let clinicFile = clinicAudioMap[data.clinic] || 'family.mp3';
                 await playAudioFile(clinicFile);
 
                 document.getElementById('mainPatient').innerText = data.name;
