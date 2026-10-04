@@ -198,10 +198,8 @@
         let isAdminLoggedIn = false;
         let lastProcessedId = parseInt(localStorage.getItem('umran_last_processed_id') || '0');
 
-        // رابط مجلد voices مباشرة
         const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
 
-        // القائمة الافتتاحية للعيادات بربط اسم العيادة المعروض مع اسم الملف الصوتي الصريح (مثل dental1.mp3)
         const defaultClinicsMap = {
             "عيادة طب الأسرة 1": "family1.mp3",
             "عيادة الأسنان 1": "dental1.mp3",
@@ -338,18 +336,27 @@
             } catch (e) {}
         }
 
-        function playAudioFile(fileName) {
+        // دالة تشغيل صوت واحد تضمن عدم حدوث تداخل وانتهاء الصوت بالكامل
+        function playSingleAudio(fileName) {
             return new Promise((resolve) => {
-                let url = voicesBaseUrl + fileName;
-                const audio = new Audio();
-                audio.src = url;
+                const audio = new Audio(voicesBaseUrl + fileName);
                 audio.preload = 'auto';
                 audio.volume = 1.0;
-                
-                audio.onended = () => resolve();
-                audio.onerror = () => resolve();
 
-                audio.play().catch(() => resolve());
+                // إذا انتهى الصوت بنجاح، انتقل للخطوة التالية فوراً
+                audio.onended = () => {
+                    resolve();
+                };
+
+                // إذا حدث أي خطأ (مثل ملف غير موجود)، تجاوز الخطأ حتى لا يتوقف النظام بالكامل
+                audio.onerror = () => {
+                    console.warn("تعذر تشغيل الملف الصوتي: " + fileName);
+                    resolve();
+                };
+
+                audio.play().catch(() => {
+                    resolve();
+                });
             });
         }
 
@@ -388,7 +395,7 @@
             nameInput.focus();
         }
 
-        // دالة النداء الصوتي المتسلسل الدقيق تماماً
+        // دالة النداء الآلي المحدثة التي تربط الملفات تسلسلياً بناءً على الحدث (onended) بدون تأخير مصطنع أو انقطاع
         async function processQueue() {
             if (isCalling || callQueue.length === 0) return;
 
@@ -397,24 +404,21 @@
 
             try {
                 // 1) نغمة التنبيه
-                await playAudioFile('ding.mp3');
-                await new Promise(r => setTimeout(r, 200));
+                await playSingleAudio('ding.mp3');
 
                 // 2) يرجى من المراجع رقم
-                await playAudioFile('please_wait.mp3');
-                await new Promise(r => setTimeout(r, 200));
+                await playSingleAudio('please_wait.mp3');
 
-                // 3) رقم المراجع المباشر من مجلد voices (مثال: 44.mp3)
-                await playAudioFile(data.name + ".mp3");
-                await new Promise(r => setTimeout(r, 200));
+                // 3) رقم المراجع (مباشرة بعد جملة يرجى من المراجع رقم)
+                await playSingleAudio(data.name + ".mp3");
 
                 // 4) التوجه إلى
-                await playAudioFile('goto.mp3');
-                await new Promise(r => setTimeout(r, 200));
+                await playSingleAudio('goto.mp3');
 
-                // 5) اسم العيادة برقمها المباشر (مثال: dental1.mp3)
-                await playAudioFile(data.clinicAudio);
+                // 5) اسم العيادة برقمها المباشر
+                await playSingleAudio(data.clinicAudio);
 
+                // تحديث الشاشة والأرشيف بعد انتهاء الصوت بالكامل
                 document.getElementById('mainPatient').innerText = data.name;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
 
