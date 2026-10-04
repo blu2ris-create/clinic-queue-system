@@ -200,7 +200,6 @@
 
         const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
         
-        // نظام الـ Web Audio API للدمج الكامل بدون Gap
         let audioCtx = null;
         const audioBufferCache = {};
 
@@ -330,21 +329,59 @@
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
 
-            // إنشاء سياق الصوت للمتصفح
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             audioCtx = new AudioContext();
 
-            // تحميل الملفات الأساسية مسبقاً في مخزن الـ AudioBuffer
             preloadAudioBuffers(["ding.mp3", "please_wait.mp3", "goto.mp3"]);
         }
 
-        // تحميل ملفات الصوت وتحويلها إلى AudioBuffer لتشغيل فوري ومدمج
+        // دالة قص الصمت التلقائي من بداية ونهاية الملف الصوتي
+        function trimSilence(buffer) {
+            const channel = buffer.getChannelData(0);
+            const threshold = 0.01; // مستوى الحساسية لاعتبار الصوت صامتاً
+            let startIdx = 0;
+            let endIdx = channel.length - 1;
+
+            // إيجاد بداية الصوت الفعلي
+            for (let i = 0; i < channel.length; i++) {
+                if (Math.abs(channel[i]) > threshold) {
+                    startIdx = Math.max(0, i - 200); // ترك مسافة صغيرة جداً لكي لا يقتطع الحرف الأول
+                    break;
+                }
+            }
+
+            // إيجاد نهاية الصوت الفعلي
+            for (let i = channel.length - 1; i >= 0; i--) {
+                if (Math.abs(channel[i]) > threshold) {
+                    endIdx = Math.min(channel.length - 1, i + 200);
+                    break;
+                }
+            }
+
+            if (startIdx >= endIdx) return buffer;
+
+            // إنشاء Buffer جديد بدون الفراغات الصامتة
+            const newBuffer = audioCtx.createBuffer(buffer.numberOfChannels, endIdx - startIdx, buffer.sampleRate);
+            for (let c = 0; c < buffer.numberOfChannels; c++) {
+                const oldData = buffer.getChannelData(c);
+                const newData = newBuffer.getChannelData(c);
+                for (let i = 0; i < newBuffer.length; i++) {
+                    newData[i] = oldData[startIdx + i];
+                }
+            }
+            return newBuffer;
+        }
+
         async function loadAudioBuffer(fileName) {
             if (audioBufferCache[fileName]) return audioBufferCache[fileName];
             try {
                 const response = await fetch(voicesBaseUrl + fileName);
                 const arrayBuffer = await response.arrayBuffer();
-                const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                let decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                
+                // تطبيق ميزة قص الصمت تلقائياً لإلغاء أي Gap داخلي في الملف
+                decodedBuffer = trimSilence(decodedBuffer);
+
                 audioBufferCache[fileName] = decodedBuffer;
                 return decodedBuffer;
             } catch (e) {
@@ -358,7 +395,7 @@
             }
         }
 
-        // دالة التشغيل المتصل المباشر (تدمج المقاطع بجدولة زمنيّة متتابعة دقيقة بنسبة 100%)
+        // تشغيل متداخل ومتقارب (Overlap جزئي بمقدار 0.03 ثانية لتجنب أي شعور بالفراغ)
         async function playSeamlessSequence(fileList) {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') {
@@ -374,9 +411,9 @@
                     source.buffer = buffer;
                     source.connect(audioCtx.destination);
                     
-                    // جدولة تشغيل المقطع بدقة متناهية فور انتهاء المقطع الذي قبله بدون أي فاصل صامت
                     source.start(startTime);
-                    startTime += buffer.duration;
+                    // تقديم الوقت قليلاً بمقدار 0.03 ثانية لدمج الكلمات ببعضها بشكل طبيعي وبدون فراغ صامت
+                    startTime += buffer.duration - 0.03; 
                 }
             }
         }
@@ -425,10 +462,8 @@
             const data = callQueue.shift();
 
             try {
-                // تحميل مسبق لملف المراجع والعيادة المطلوبة
                 await preloadAudioBuffers([data.patientAudioFile, data.clinicAudioFile]);
 
-                // تشغيل السلسلة الصوتية بالكامل متصلة تماماً بدون Gap
                 const sequence = [
                     "ding.mp3",
                     "please_wait.mp3",
@@ -448,11 +483,10 @@
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
                 saveToArchive(data);
             } finally {
-                // الانتظار لحين انتهاء إجمالي مدة الأصوات قبل السماح بالنداء التالي
                 setTimeout(() => {
                     isCalling = false;
                     processQueue();
-                }, 4000);
+                }, 3500);
             }
         }
 
