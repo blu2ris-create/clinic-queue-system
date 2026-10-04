@@ -132,8 +132,8 @@
         <p class="text-center text-muted small mb-4">مركز صحي الصالحية للرعاية الأولية</p>
         
         <div class="mb-3">
-            <label class="form-label">رقم المراجع (من 1 إلى 500):</label>
-            <input type="number" id="patientName" class="form-control" placeholder="مثال: 44 أو 125" min="1" max="500" autocomplete="off">
+            <label class="form-label">رقم أو اسم المراجع (مثال: GAP 65):</label>
+            <input type="text" id="patientName" class="form-control" placeholder="أدخل رقم أو اسم المراجع" autocomplete="off">
         </div>
 
         <div class="mb-4">
@@ -198,6 +198,7 @@
         let isAdminLoggedIn = false;
         let lastProcessedId = parseInt(localStorage.getItem('umran_last_processed_id') || '0');
 
+        // رابط GitHub المباشر لمجلد الملفات الصوتيةvoices
         const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
 
         const globalAudio = new Audio();
@@ -350,6 +351,7 @@
             } catch (e) {}
         }
 
+        // دالة تشغيل التسلسل الصوتي المتصل بدون أي GAPs وسحبها من GitHub
         function playAudioSequence(fileList) {
             return new Promise((resolve) => {
                 let index = 0;
@@ -392,8 +394,8 @@
             const clinicsMap = getClinicsMap();
             const clinicAudioFile = clinicsMap[clinicName] || 'family.1.mp3';
 
-            if (!name || isNaN(name) || parseInt(name) < 1 || parseInt(name) > 500) {
-                alert('الرجاء إدخال رقم مراجع صحيح من 1 إلى 500');
+            if (!name) {
+                alert('الرجاء إدخال رقم أو اسم المراجع');
                 nameInput.focus();
                 return;
             }
@@ -426,11 +428,9 @@
             const data = callQueue.shift();
 
             try {
-                // الترتيب المطلوب بدقة: ding ⬅️ رقم المراجع ⬅️ goto (التوجه إلى) ⬅️ اسم العيادة
+                // التسلسل الصحيح: نغمة التنبيه ding ⬅️ ملف العيادة الجاهز من GitHub
                 const sequence = [
                     'ding.mp3',
-                    data.name + '.mp3',
-                    'goto.mp3',
                     data.clinicAudio
                 ];
 
