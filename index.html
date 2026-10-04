@@ -342,39 +342,46 @@
             } catch (e) {}
         }
 
-        // دالة تشغيل التسلسل الصوتي بضمان تسلسل العناصر الخمسة بالتتابع دون تخطي
-        function playAudioSequence(fileList) {
+        // دالة تشغيل صوتية مبنية على Promise موثوقة تماماً ومزودة بتتبع الأخطاء
+        function playSingleAudio(fileName) {
             return new Promise((resolve) => {
-                let index = 0;
+                const fullUrl = voicesBaseUrl + fileName;
+                console.log("محاولة تشغيل الصوت: " + fullUrl);
+                
+                globalAudio.src = fullUrl;
+                globalAudio.load();
 
-                function playNext() {
-                    if (index >= fileList.length) {
-                        resolve();
-                        return;
-                    }
+                let isFinished = false;
 
-                    const fileName = fileList[index];
-                    index++;
-
-                    globalAudio.src = voicesBaseUrl + fileName;
-                    globalAudio.load();
-
-                    globalAudio.onended = () => {
-                        playNext();
-                    };
-
-                    globalAudio.onerror = () => {
-                        console.warn("تعذر تشغيل الملف الصوتي: " + fileName);
-                        playNext();
-                    };
-
-                    globalAudio.play().catch(() => {
-                        playNext();
-                    });
+                function cleanAndResolve() {
+                    if (isFinished) return;
+                    isFinished = true;
+                    globalAudio.onended = null;
+                    globalAudio.onerror = null;
+                    resolve();
                 }
 
-                playNext();
+                globalAudio.onended = () => {
+                    console.log("انتهى تشغيل: " + fileName);
+                    cleanAndResolve();
+                };
+
+                globalAudio.onerror = (e) => {
+                    console.warn("خطأ في ملف الصوت أو غير موجود (تخطي): " + fileName, e);
+                    cleanAndResolve();
+                };
+
+                globalAudio.play().catch((err) => {
+                    console.warn("فشل التشغيل المباشر لـ: " + fileName, err);
+                    cleanAndResolve();
+                });
             });
+        }
+
+        async function playAudioSequence(fileList) {
+            for (const file of fileList) {
+                await playSingleAudio(file);
+            }
         }
 
         function sendCall() {
@@ -421,12 +428,12 @@
             const data = callQueue.shift();
 
             try {
-                // ترتيب التشغيل الصوتي الكامل والدقيق:
-                // 1. ding.mp3 (نغمة التنبيه)
-                // 2. patient.mp3 (يرجى من المراجع رقم)
+                // التسلسل الصوتي الكامل بالترتيب:
+                // 1. نغمة التنبيه (ding.mp3)
+                // 2. جملة يرجى من المراجع رقم (patient.mp3)
                 // 3. رقم المراجع (مثل 46.mp3)
-                // 4. to.mp3 (التوجه إلى)
-                // 5. ملف العيادة المرتبط (مثل dental.1.mp3)
+                // 4. جملة التوجه إلى (to.mp3)
+                // 5. ملف العيادة (مثل dental.1.mp3)
                 const sequence = [
                     "ding.mp3",
                     "patient.mp3",
@@ -540,11 +547,7 @@
 
         function removeClinic(clinicKey) {
             let clinicsMap = getClinicsMap();
-            if (Object.keys(clinicsMap).length <= 1) {
-                alert('يجب أن تبقى عيادة واحدة على الأقل!');
-                return;
-            }
-            delete clinicsMap[clinicKey];
+            Object.keys(clinicsMap).length <= 1 ? alert('يجب أن تبقى عيادة واحدة على الأقل!') : delete clinicsMap[clinicKey];
             saveClinicsMap(clinicsMap);
         }
 
