@@ -132,13 +132,8 @@
         <p class="text-center text-muted small mb-4">مركز صحي الصالحية للرعاية الأولية</p>
         
         <div class="mb-3">
-            <label class="form-label">رقم ملف الصوت للمراجع (مثال: 101):</label>
-            <input type="number" id="patientAudioNum" class="form-control" placeholder="أدخل رقم الملف الصوتي (مثل: 101)" min="1" max="500" autocomplete="off">
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">رقم المراجع الظاهر على الشاشة (مثال: A-101):</label>
-            <input type="text" id="patientDisplayLabel" class="form-control" placeholder="أدخل النص أو الرقم للعرض" autocomplete="off">
+            <label class="form-label">رقم المراجع (مثال: 101):</label>
+            <input type="number" id="patientNumberInput" class="form-control" placeholder="أدخل رقم المراجع..." min="1" max="500" autocomplete="off">
         </div>
 
         <div class="mb-4">
@@ -169,7 +164,7 @@
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small">إدارة أرقام ملفات العيادات:</label>
+                    <label class="form-label small">إدارة ملفات العيادات:</label>
                     <div id="clinicsTagsList" class="clinics-scroll-box d-flex flex-column gap-1"></div>
                 </div>
                 <div class="border-top border-secondary pt-2 mt-2">
@@ -213,7 +208,7 @@
             let stored = localStorage.getItem('umran_clinics_map');
             if (stored) return JSON.parse(stored);
 
-            // تخزين افتراضي يربط كل عيادة برقم ملفها الصوتي الجاهز من 1 إلى 500
+            // ربط العيادات بملفات الصوت مباشرة (من 1 إلى 500)
             const defaultClinicsMap = {
                 "عيادة الأسنان 1": "10.mp3",
                 "عيادة الأسنان 2": "11.mp3",
@@ -383,27 +378,24 @@
         }
 
         function sendCall() {
-            const audioNumInput = document.getElementById('patientAudioNum');
-            const displayLabelInput = document.getElementById('patientDisplayLabel');
-            
-            const audioNum = audioNumInput.value.trim();
-            const displayLabel = displayLabelInput.value.trim() || audioNum;
+            const input = document.getElementById('patientNumberInput');
+            const patientNum = input.value.trim();
             
             const clinicSelect = document.getElementById('clinicSelect');
             const clinicName = clinicSelect.value;
             const clinicsMap = getClinicsMap();
             const clinicAudioFile = clinicsMap[clinicName] || '1.mp3';
 
-            if (!audioNum) {
-                alert('الرجاء إدخال رقم ملف الصوت للمراجع');
-                audioNumInput.focus();
+            if (!patientNum) {
+                alert('الرجاء إدخال رقم المراجع');
+                input.focus();
                 return;
             }
 
             const callData = {
                 id: Date.now(),
-                patientDisplay: displayLabel,
-                patientAudioFile: audioNum + '.mp3',
+                patientNumber: patientNum,
+                patientAudioFile: patientNum + '.mp3',
                 clinicName: clinicName,
                 clinicAudioFile: clinicAudioFile
             };
@@ -418,9 +410,8 @@
             msg.style.display = 'block';
             setTimeout(() => { msg.style.display = 'none'; }, 2000);
             
-            audioNumInput.value = '';
-            displayLabelInput.value = '';
-            audioNumInput.focus();
+            input.value = '';
+            input.focus();
         }
 
         async function processQueue() {
@@ -430,7 +421,7 @@
             const data = callQueue.shift();
 
             try {
-                // تشغيل الملفات مباشرة بالتسلسل الجاهز (مثلاً: رقم المراجع ثم العيادة)
+                // تشغيل ملف رقم المراجع ثم ملف العيادة مباشرة
                 const sequence = [
                     data.patientAudioFile,
                     data.clinicAudioFile
@@ -438,12 +429,12 @@
 
                 await playAudioSequence(sequence);
 
-                document.getElementById('mainPatient').innerText = data.patientDisplay;
+                document.getElementById('mainPatient').innerText = data.patientNumber;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
 
                 saveToArchive(data);
             } catch (error) {
-                document.getElementById('mainPatient').innerText = data.patientDisplay;
+                document.getElementById('mainPatient').innerText = data.patientNumber;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
                 saveToArchive(data);
             } finally {
@@ -456,7 +447,7 @@
             let archive = JSON.parse(localStorage.getItem('umran_health_archive') || '[]');
             const currentTime = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
-            archive.unshift({ name: data.patientDisplay, clinic: data.clinicName, time: currentTime });
+            archive.unshift({ name: data.patientNumber, clinic: data.clinicName, time: currentTime });
             if (archive.length > 10) archive.pop();
 
             localStorage.setItem('umran_health_archive', JSON.stringify(archive));
