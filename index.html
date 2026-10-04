@@ -200,8 +200,9 @@
 
         const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
         
-        // ذاكرة تخزين مؤقتة لكائنات الصوت المحملة مسبقاً (لإلغاء أي فجوة زمنية Gap)
-        const audioCache = {};
+        // نظام الـ Web Audio API للدمج الكامل بدون Gap
+        let audioCtx = null;
+        const audioBufferCache = {};
 
         function getClinicsMap() {
             let stored = localStorage.getItem('umran_clinics_map');
@@ -329,54 +330,54 @@
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
 
-            // تحميل مسبق أساسي للملفات الثابتة لضمان جاهزيتها الفورية
-            preloadAudioFiles(["ding.mp3", "please_wait.mp3", "goto.mp3"]);
+            // إنشاء سياق الصوت للمتصفح
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
+            // تحميل الملفات الأساسية مسبقاً في مخزن الـ AudioBuffer
+            preloadAudioBuffers(["ding.mp3", "please_wait.mp3", "goto.mp3"]);
         }
 
-        // دالة لتحميل الملفات مسبقاً في المتصفح لضمان عدم وجود تأخير شبكي
-        function preloadAudioFiles(fileNames) {
-            fileNames.forEach(fileName => {
-                if (!audioCache[fileName]) {
-                    const audio = new Audio(voicesBaseUrl + fileName);
-                    audio.preload = 'auto';
-                    audio.load();
-                    audioCache[fileName] = audio;
-                }
-            });
+        // تحميل ملفات الصوت وتحويلها إلى AudioBuffer لتشغيل فوري ومدمج
+        async function loadAudioBuffer(fileName) {
+            if (audioBufferCache[fileName]) return audioBufferCache[fileName];
+            try {
+                const response = await fetch(voicesBaseUrl + fileName);
+                const arrayBuffer = await response.arrayBuffer();
+                const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                audioBufferCache[fileName] = decodedBuffer;
+                return decodedBuffer;
+            } catch (e) {
+                return null;
+            }
         }
 
-        // تشغيل ملف صوتي من الذاكرة المؤقتة بدون فجوة زمنية
-        function playCachedAudio(fileName) {
-            return new Promise((resolve) => {
-                let audio = audioCache[fileName];
-                if (!audio) {
-                    audio = new Audio(voicesBaseUrl + fileName);
-                    audioCache[fileName] = audio;
-                }
-
-                audio.currentTime = 0; // إرجاع المؤشر للبداية لتشغيل فوري
-                audio.volume = 1.0;
-
-                let finished = false;
-                function done() {
-                    if (finished) return;
-                    finished = true;
-                    audio.onended = null;
-                    audio.onerror = null;
-                    resolve();
-                }
-
-                audio.onended = done;
-                audio.onerror = () => done();
-
-                audio.play().catch(() => done());
-            });
+        async function preloadAudioBuffers(fileNames) {
+            for (const file of fileNames) {
+                await loadAudioBuffer(file);
+            }
         }
 
-        // تسلسل الملفات بدون أي وقفات بينها
-        async function playAudioSequence(fileList) {
+        // دالة التشغيل المتصل المباشر (تدمج المقاطع بجدولة زمنيّة متتابعة دقيقة بنسبة 100%)
+        async function playSeamlessSequence(fileList) {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+
+            let startTime = audioCtx.currentTime;
+
             for (const file of fileList) {
-                await playCachedAudio(file);
+                let buffer = await loadAudioBuffer(file);
+                if (buffer) {
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(audioCtx.destination);
+                    
+                    // جدولة تشغيل المقطع بدقة متناهية فور انتهاء المقطع الذي قبله بدون أي فاصل صامت
+                    source.start(startTime);
+                    startTime += buffer.duration;
+                }
             }
         }
 
@@ -424,10 +425,10 @@
             const data = callQueue.shift();
 
             try {
-                // تحميل رقم المراجع وملف العيادة مسبقاً قبل التشغيل الفعلي لتفادي أي تأخير جلب من الـ GitHub
-                preloadAudioFiles([data.patientAudioFile, data.clinicAudioFile]);
+                // تحميل مسبق لملف المراجع والعيادة المطلوبة
+                await preloadAudioBuffers([data.patientAudioFile, data.clinicAudioFile]);
 
-                // التسلسل الصوتي المتتابع والفوري:
+                // تشغيل السلسلة الصوتية بالكامل متصلة تماماً بدون Gap
                 const sequence = [
                     "ding.mp3",
                     "please_wait.mp3",
@@ -436,7 +437,7 @@
                     data.clinicAudioFile
                 ];
 
-                await playAudioSequence(sequence);
+                await playSeamlessSequence(sequence);
 
                 document.getElementById('mainPatient').innerText = data.patientNumber;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
@@ -447,8 +448,11 @@
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
                 saveToArchive(data);
             } finally {
-                isCalling = false;
-                processQueue();
+                // الانتظار لحين انتهاء إجمالي مدة الأصوات قبل السماح بالنداء التالي
+                setTimeout(() => {
+                    isCalling = false;
+                    processQueue();
+                }, 4000);
             }
         }
 
