@@ -199,9 +199,9 @@
         let lastProcessedId = parseInt(localStorage.getItem('umran_last_processed_id') || '0');
 
         const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
-        const globalAudio = new Audio();
-        globalAudio.preload = 'auto';
-        globalAudio.volume = 1.0;
+        
+        // ذاكرة تخزين مؤقتة لكائنات الصوت المحملة مسبقاً (لإلغاء أي فجوة زمنية Gap)
+        const audioCache = {};
 
         function getClinicsMap() {
             let stored = localStorage.getItem('umran_clinics_map');
@@ -329,39 +329,54 @@
             document.getElementById('displayScreen').style.display = 'flex';
             requestFullscreen();
 
-            try {
-                globalAudio.src = voicesBaseUrl + "ding.mp3";
-                globalAudio.volume = 0.01;
-                await globalAudio.play();
-                globalAudio.pause();
-                globalAudio.volume = 1.0;
-            } catch (e) {}
+            // تحميل مسبق أساسي للملفات الثابتة لضمان جاهزيتها الفورية
+            preloadAudioFiles(["ding.mp3", "please_wait.mp3", "goto.mp3"]);
         }
 
-        function playSingleAudio(fileName) {
+        // دالة لتحميل الملفات مسبقاً في المتصفح لضمان عدم وجود تأخير شبكي
+        function preloadAudioFiles(fileNames) {
+            fileNames.forEach(fileName => {
+                if (!audioCache[fileName]) {
+                    const audio = new Audio(voicesBaseUrl + fileName);
+                    audio.preload = 'auto';
+                    audio.load();
+                    audioCache[fileName] = audio;
+                }
+            });
+        }
+
+        // تشغيل ملف صوتي من الذاكرة المؤقتة بدون فجوة زمنية
+        function playCachedAudio(fileName) {
             return new Promise((resolve) => {
-                const fullUrl = voicesBaseUrl + fileName;
-                globalAudio.src = fullUrl;
-                globalAudio.load();
+                let audio = audioCache[fileName];
+                if (!audio) {
+                    audio = new Audio(voicesBaseUrl + fileName);
+                    audioCache[fileName] = audio;
+                }
+
+                audio.currentTime = 0; // إرجاع المؤشر للبداية لتشغيل فوري
+                audio.volume = 1.0;
 
                 let finished = false;
                 function done() {
                     if (finished) return;
                     finished = true;
-                    globalAudio.onended = null;
-                    globalAudio.onerror = null;
+                    audio.onended = null;
+                    audio.onerror = null;
                     resolve();
                 }
 
-                globalAudio.onended = done;
-                globalAudio.onerror = () => done();
-                globalAudio.play().catch(() => done());
+                audio.onended = done;
+                audio.onerror = () => done();
+
+                audio.play().catch(() => done());
             });
         }
 
+        // تسلسل الملفات بدون أي وقفات بينها
         async function playAudioSequence(fileList) {
             for (const file of fileList) {
-                await playSingleAudio(file);
+                await playCachedAudio(file);
             }
         }
 
@@ -409,12 +424,10 @@
             const data = callQueue.shift();
 
             try {
-                // التسلسل الصوتي المتطابق مع ملفاتك الفعلية في GitHub:
-                // 1. ding.mp3 (نغمة التنبيه)
-                // 2. please_wait.mp3 (يرجى من المراجع رقم)
-                // 3. [رقم المراجع].mp3 (رقم المراجع مثل 46.mp3)
-                // 4. goto.mp3 (التوجه إلى)
-                // 5. [ملف العيادة].mp3 (مثل lab.mp3)
+                // تحميل رقم المراجع وملف العيادة مسبقاً قبل التشغيل الفعلي لتفادي أي تأخير جلب من الـ GitHub
+                preloadAudioFiles([data.patientAudioFile, data.clinicAudioFile]);
+
+                // التسلسل الصوتي المتتابع والفوري:
                 const sequence = [
                     "ding.mp3",
                     "please_wait.mp3",
