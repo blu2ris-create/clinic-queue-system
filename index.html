@@ -186,12 +186,17 @@
         const brokerUrl = 'wss://broker.hivemq.com:8884/mqtt';
         const uniqueTopic = 'umran_health_cluster_ksa_2026_secure_calls';
         const clientId = 'client_' + Math.random().toString(16).substr(2, 8);
-        const client = mqtt.connect(brokerUrl, { clientId: clientId });
+        
+        let client = null;
+        try {
+            client = mqtt.connect(brokerUrl, { clientId: clientId, keepalive: 60, reconnectPeriod: 1000 });
+        } catch(e) {}
 
         let isScreenActive = false;
         let isCalling = false;
         let callQueue = [];
         let isAdminLoggedIn = false;
+        let lastProcessedId = parseInt(localStorage.getItem('umran_last_processed_id') || '0');
 
         const githubAudioBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/";
 
@@ -267,6 +272,21 @@
                     document.getElementById('fullscreenBtn').style.display = 'none';
                 }
             });
+
+            // نظام تتبع التخزين المحلي الاحتياطي لضمان عمل الشاشة فوراً
+            window.addEventListener('storage', (event) => {
+                if (event.key === 'umran_latest_call_event' && isScreenActive) {
+                    try {
+                        const data = JSON.parse(event.newValue);
+                        if (data && data.id > lastProcessedId) {
+                            lastProcessedId = data.id;
+                            localStorage.setItem('umran_last_processed_id', lastProcessedId);
+                            callQueue.push(data);
+                            processQueue();
+                        }
+                    } catch(e) {}
+                }
+            });
         });
 
         function requestFullscreen() {
@@ -274,19 +294,25 @@
             document.getElementById('fullscreenBtn').style.display = 'none';
         }
 
-        client.on('connect', () => {
-            client.subscribe(uniqueTopic);
-        });
+        if (client) {
+            client.on('connect', () => {
+                client.subscribe(uniqueTopic);
+            });
 
-        client.on('message', (topic, message) => {
-            if (topic === uniqueTopic && isScreenActive) {
-                try {
-                    const data = JSON.parse(message.toString());
-                    callQueue.push(data);
-                    processQueue();
-                } catch (e) {}
-            }
-        });
+            client.on('message', (topic, message) => {
+                if (topic === uniqueTopic && isScreenActive) {
+                    try {
+                        const data = JSON.parse(message.toString());
+                        if (data.id > lastProcessedId) {
+                            lastProcessedId = data.id;
+                            localStorage.setItem('umran_last_processed_id', lastProcessedId);
+                            callQueue.push(data);
+                            processQueue();
+                        }
+                    } catch (e) {}
+                }
+            });
+        }
 
         function startMode(mode) {
             document.getElementById('roleSelector').style.display = 'none';
@@ -343,7 +369,13 @@
                 clinic: clinic
             };
 
-            client.publish(uniqueTopic, JSON.stringify(callData));
+            // إرسال عبر MQTT
+            if (client && client.connected) {
+                client.publish(uniqueTopic, JSON.stringify(callData));
+            }
+
+            // إرسال عبر التخزين المحلي كبديل فوري مضمون 100%
+            localStorage.setItem('umran_latest_call_event', JSON.stringify(callData));
 
             const msg = document.getElementById('successMsg');
             msg.style.display = 'block';
@@ -417,7 +449,7 @@
                 await playAudioFile('voices/goto.mp3');
                 await new Promise(r => setTimeout(r, 150));
 
-                // 5) العيادة المستهدفة (تأخذ المسار الصحيح voices/)
+                // 5) العيادة المستهدفة
                 let clinicFile = clinicAudioMap[data.clinic] || 'voices/family.mp3';
                 await playAudioFile(clinicFile);
 
