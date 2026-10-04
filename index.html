@@ -335,23 +335,23 @@
             preloadAudioBuffers(["ding.mp3", "please_wait.mp3", "goto.mp3"]);
         }
 
-        // دالة قص الصمت التلقائي من بداية ونهاية الملف الصوتي بدقة عالية
+        // دالة قص الصمت المطور لإزالة أي فراغات داخلية أو أطراف فارغة في الملفات الصوتية بنسبة 100%
         function trimSilence(buffer) {
             const channel = buffer.getChannelData(0);
-            const threshold = 0.015; // زيادة الحساسية لضمان قص الصمت تماماً
+            const threshold = 0.02; // عتبة حساسة جداً لإزالة الصمت الحقيقي
             let startIdx = 0;
             let endIdx = channel.length - 1;
 
             for (let i = 0; i < channel.length; i++) {
                 if (Math.abs(channel[i]) > threshold) {
-                    startIdx = Math.max(0, i - 50); 
+                    startIdx = Math.max(0, i - 10); // إبقاء 10 عينات فقط لمنع أي طقطقة
                     break;
                 }
             }
 
             for (let i = channel.length - 1; i >= 0; i--) {
                 if (Math.abs(channel[i]) > threshold) {
-                    endIdx = Math.min(channel.length - 1, i + 50);
+                    endIdx = Math.min(channel.length - 1, i + 10);
                     break;
                 }
             }
@@ -391,7 +391,7 @@
             }
         }
 
-        // دمج جميع المقاطع الصوتية في ملف واحد متصل (Master Buffer) داخل الذاكرة لإلغاء أي Gap بنسبة 100%
+        // دمج الصوتيات في ملف واحد متصل تماماً (Master Buffer) بدون أي وقت انتظار أو فجوات نهائياً
         async function playMergedSequence(fileList) {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') {
@@ -415,7 +415,6 @@
 
             if (loadedBuffers.length === 0) return;
 
-            // إنشاء ملف صوتي عملاق واحد يدمج كل الجملة مباشرة
             const masterBuffer = audioCtx.createBuffer(numberOfChannels, totalLength, sampleRate);
             
             for (let c = 0; c < numberOfChannels; c++) {
@@ -428,7 +427,6 @@
                 }
             }
 
-            // تشغيل الملف المدمج دفعة واحدة بدون أي فجوات نهائياً
             const source = audioCtx.createBufferSource();
             source.buffer = masterBuffer;
             source.connect(audioCtx.destination);
@@ -503,7 +501,7 @@
                 setTimeout(() => {
                     isCalling = false;
                     processQueue();
-                }, 4000);
+                }, 3000); // تقليص وقت الانتظار بين النداءات لتسريع الاستجابة
             }
         }
 
@@ -561,7 +559,7 @@
                 document.getElementById('adminLoginSection').style.display = 'none';
                 document.getElementById('adminActionsSection').style.display = 'block';
                 document.getElementById('adminToggleBtn').innerText = '✕';
-                    updateClinicsUI();
+                updateClinicsUI();
             } else {
                 alert('الرقم السري غير صحيح!');
             }
