@@ -208,7 +208,6 @@
             let stored = localStorage.getItem('umran_clinics_map');
             if (stored) return JSON.parse(stored);
 
-            // ربط أسماء العيادات بأسماء ملفات الصوت المرفوعة (مثل dental.1, dental.2, إلخ)
             const defaultClinicsMap = {
                 "عيادة الأسنان 1": "dental.1.mp3",
                 "عيادة الأسنان 2": "dental.2.mp3",
@@ -343,6 +342,7 @@
             } catch (e) {}
         }
 
+        // دالة تشغيل التسلسل الصوتي بضمان تسلسل العناصر الخمسة بالتتابع دون تخطي
         function playAudioSequence(fileList) {
             return new Promise((resolve) => {
                 let index = 0;
@@ -421,12 +421,12 @@
             const data = callQueue.shift();
 
             try {
-                // الترتيب الصوتي الدقيق المطلوب:
-                // 1. نغمة التنبيه (ding.mp3)
-                // 2. يرجى من المراجع رقم (patient.mp3)
+                // ترتيب التشغيل الصوتي الكامل والدقيق:
+                // 1. ding.mp3 (نغمة التنبيه)
+                // 2. patient.mp3 (يرجى من المراجع رقم)
                 // 3. رقم المراجع (مثل 46.mp3)
-                // 4. التوجه إلى (to.mp3)
-                // 5. اسم ملف العيادة (مثل dental.1.mp3)
+                // 4. to.mp3 (التوجه إلى)
+                // 5. ملف العيادة المرتبط (مثل dental.1.mp3)
                 const sequence = [
                     "ding.mp3",
                     "patient.mp3",
