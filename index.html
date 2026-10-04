@@ -57,8 +57,8 @@
         
         #adminPanel { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #334155; background: #0f172a; padding: 15px; border-radius: 12px; }
         .clinics-scroll-box { max-height: 180px; overflow-y: auto; border: 1px solid #334155; padding: 10px; border-radius: 8px; background: #0b0f19; }
-        .clinic-tag { display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; padding: 6px 12px; border-radius: 8px; margin: 4px; font-size: 0.9rem; color: #f8fafc; }
-        .clinic-tag button { background: none; border: none; color: #ef4444; margin-right: 8px; font-weight: bold; cursor: pointer; }
+        .clinic-tag { display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; padding: 6px 12px; border-radius: 8px; margin: 4px; font-size: 0.9rem; color: #f8fafc; justify-content: space-between; width: 100%; }
+        .clinic-tag button { background: none; border: none; color: #ef4444; font-weight: bold; cursor: pointer; }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -132,8 +132,13 @@
         <p class="text-center text-muted small mb-4">مركز صحي الصالحية للرعاية الأولية</p>
         
         <div class="mb-3">
-            <label class="form-label">رقم أو اسم المراجع (مثال: GAP 65):</label>
-            <input type="text" id="patientName" class="form-control" placeholder="أدخل رقم أو اسم المراجع" autocomplete="off">
+            <label class="form-label">رقم ملف الصوت للمراجع (مثال: 101):</label>
+            <input type="number" id="patientAudioNum" class="form-control" placeholder="أدخل رقم الملف الصوتي (مثل: 101)" min="1" max="500" autocomplete="off">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">رقم المراجع الظاهر على الشاشة (مثال: A-101):</label>
+            <input type="text" id="patientDisplayLabel" class="form-control" placeholder="أدخل النص أو الرقم للعرض" autocomplete="off">
         </div>
 
         <div class="mb-4">
@@ -164,8 +169,8 @@
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small">العيادات وملفاتها الصوتية:</label>
-                    <div id="clinicsTagsList" class="clinics-scroll-box d-flex flex-wrap gap-1"></div>
+                    <label class="form-label small">إدارة أرقام ملفات العيادات:</label>
+                    <div id="clinicsTagsList" class="clinics-scroll-box d-flex flex-column gap-1"></div>
                 </div>
                 <div class="border-top border-secondary pt-2 mt-2">
                     <label class="form-label small text-info">تغيير الرقم السري للأدمن:</label>
@@ -198,7 +203,6 @@
         let isAdminLoggedIn = false;
         let lastProcessedId = parseInt(localStorage.getItem('umran_last_processed_id') || '0');
 
-        // رابط GitHub المباشر لمجلد الملفات الصوتيةvoices
         const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
 
         const globalAudio = new Audio();
@@ -209,24 +213,14 @@
             let stored = localStorage.getItem('umran_clinics_map');
             if (stored) return JSON.parse(stored);
 
-            const defaultClinicsMap = {};
-            
-            for (let i = 1; i <= 15; i++) {
-                defaultClinicsMap[`عيادة الأسنان ${i}`] = `dental.${i}.mp3`;
-            }
-
-            for (let i = 1; i <= 15; i++) {
-                defaultClinicsMap[`عيادة طب الأسرة ${i}`] = `family.${i}.mp3`;
-            }
-
-            defaultClinicsMap["عيادة متابعة الحوامل"] = "pregnancy.mp3";
-            defaultClinicsMap["عيادة العلامات الحيوية"] = "vitals.mp3";
-            defaultClinicsMap["عيادة المدرب الصحي"] = "coach.mp3";
-            defaultClinicsMap["غرفة سحب الدم"] = "lab.mp3";
-            defaultClinicsMap["عيادة التطعيم"] = "vaccine.mp3";
-            defaultClinicsMap["عيادة الجروح"] = "Wound.mp3";
-            defaultClinicsMap["قسم الأشعة"] = "Xray.mp3";
-
+            // تخزين افتراضي يربط كل عيادة برقم ملفها الصوتي الجاهز من 1 إلى 500
+            const defaultClinicsMap = {
+                "عيادة الأسنان 1": "10.mp3",
+                "عيادة الأسنان 2": "11.mp3",
+                "عيادة طب الأسرة": "12.mp3",
+                "غرفة سحب الدم": "13.mp3",
+                "عيادة التطعيم": "14.mp3"
+            };
             return defaultClinicsMap;
         }
 
@@ -247,8 +241,11 @@
             if (tagsList) {
                 tagsList.innerHTML = keys.map((c) => `
                     <div class="clinic-tag">
-                        <span>${c} (${clinicsMap[c]})</span>
-                        <button onclick="removeClinic('${c}')">✕</button>
+                        <span style="font-size: 0.85rem;"><b>${c}</b><br><span class="text-warning">ملف الصوت: ${clinicsMap[c]}</span></span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-info py-0 px-1 me-1" onclick="editClinicFile('${c}')">تعديل</button>
+                            <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeClinic('${c}')">✕</button>
+                        </div>
                     </div>
                 `).join('');
             }
@@ -343,7 +340,7 @@
             requestFullscreen();
 
             try {
-                globalAudio.src = voicesBaseUrl + "ding.mp3";
+                globalAudio.src = voicesBaseUrl + "1.mp3";
                 globalAudio.volume = 0.01;
                 await globalAudio.play();
                 globalAudio.pause();
@@ -351,7 +348,6 @@
             } catch (e) {}
         }
 
-        // دالة تشغيل التسلسل الصوتي المتصل بدون أي GAPs وسحبها من GitHub
         function playAudioSequence(fileList) {
             return new Promise((resolve) => {
                 let index = 0;
@@ -373,7 +369,7 @@
                     };
 
                     globalAudio.onerror = () => {
-                        console.warn("تخطي ملف صوتي غير موجود: " + fileName);
+                        console.warn("تعذر تشغيل الملف الصوتي: " + fileName);
                         playNext();
                     };
 
@@ -387,24 +383,29 @@
         }
 
         function sendCall() {
-            const nameInput = document.getElementById('patientName');
-            const name = nameInput.value.trim();
+            const audioNumInput = document.getElementById('patientAudioNum');
+            const displayLabelInput = document.getElementById('patientDisplayLabel');
+            
+            const audioNum = audioNumInput.value.trim();
+            const displayLabel = displayLabelInput.value.trim() || audioNum;
+            
             const clinicSelect = document.getElementById('clinicSelect');
             const clinicName = clinicSelect.value;
             const clinicsMap = getClinicsMap();
-            const clinicAudioFile = clinicsMap[clinicName] || 'family.1.mp3';
+            const clinicAudioFile = clinicsMap[clinicName] || '1.mp3';
 
-            if (!name) {
-                alert('الرجاء إدخال رقم أو اسم المراجع');
-                nameInput.focus();
+            if (!audioNum) {
+                alert('الرجاء إدخال رقم ملف الصوت للمراجع');
+                audioNumInput.focus();
                 return;
             }
 
             const callData = {
                 id: Date.now(),
-                name: name,
+                patientDisplay: displayLabel,
+                patientAudioFile: audioNum + '.mp3',
                 clinicName: clinicName,
-                clinicAudio: clinicAudioFile
+                clinicAudioFile: clinicAudioFile
             };
 
             if (client && client.connected) {
@@ -417,8 +418,9 @@
             msg.style.display = 'block';
             setTimeout(() => { msg.style.display = 'none'; }, 2000);
             
-            nameInput.value = '';
-            nameInput.focus();
+            audioNumInput.value = '';
+            displayLabelInput.value = '';
+            audioNumInput.focus();
         }
 
         async function processQueue() {
@@ -428,20 +430,20 @@
             const data = callQueue.shift();
 
             try {
-                // التسلسل الصحيح: نغمة التنبيه ding ⬅️ ملف العيادة الجاهز من GitHub
+                // تشغيل الملفات مباشرة بالتسلسل الجاهز (مثلاً: رقم المراجع ثم العيادة)
                 const sequence = [
-                    'ding.mp3',
-                    data.clinicAudio
+                    data.patientAudioFile,
+                    data.clinicAudioFile
                 ];
 
                 await playAudioSequence(sequence);
 
-                document.getElementById('mainPatient').innerText = data.name;
+                document.getElementById('mainPatient').innerText = data.patientDisplay;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
 
                 saveToArchive(data);
             } catch (error) {
-                document.getElementById('mainPatient').innerText = data.name;
+                document.getElementById('mainPatient').innerText = data.patientDisplay;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
                 saveToArchive(data);
             } finally {
@@ -454,7 +456,7 @@
             let archive = JSON.parse(localStorage.getItem('umran_health_archive') || '[]');
             const currentTime = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
-            archive.unshift({ name: data.name, clinic: data.clinicName, time: currentTime });
+            archive.unshift({ name: data.patientDisplay, clinic: data.clinicName, time: currentTime });
             if (archive.length > 10) archive.pop();
 
             localStorage.setItem('umran_health_archive', JSON.stringify(archive));
@@ -517,12 +519,23 @@
 
             let clinicsMap = getClinicsMap();
             let cName = prompt("أدخل اسم العيادة المعروض على الشاشة:", val);
-            let cFile = prompt("أدخل اسم ملف الصوت بدقة في مجلد voices:", "family.16.mp3");
+            let cFileNum = prompt("أدخل رقم ملف الصوت للعيادة (مثال: 20):", "15");
 
-            if (cName && cFile) {
-                clinicsMap[cName] = cFile;
+            if (cName && cFileNum) {
+                clinicsMap[cName] = cFileNum.trim() + ".mp3";
                 saveClinicsMap(clinicsMap);
                 input.value = '';
+            }
+        }
+
+        function editClinicFile(clinicKey) {
+            let clinicsMap = getClinicsMap();
+            let currentFileNum = clinicsMap[clinicKey].replace('.mp3', '');
+            let newFileNum = prompt(`أدخل رقم ملف الصوت الجديد لـ (${clinicKey}) (من 1 إلى 500):`, currentFileNum);
+            if (newFileNum) {
+                clinicsMap[clinicKey] = newFileNum.trim() + ".mp3";
+                saveClinicsMap(clinicsMap);
+                alert('تم تحديث ملف الصوت للعيادة بنجاح!');
             }
         }
 
