@@ -335,32 +335,29 @@
             preloadAudioBuffers(["ding.mp3", "please_wait.mp3", "goto.mp3"]);
         }
 
-        // دالة قص الصمت التلقائي من بداية ونهاية الملف الصوتي
+        // دالة قص الصمت التلقائي من بداية ونهاية الملف الصوتي بدقة عالية
         function trimSilence(buffer) {
             const channel = buffer.getChannelData(0);
-            const threshold = 0.01; // مستوى الحساسية لاعتبار الصوت صامتاً
+            const threshold = 0.015; // زيادة الحساسية لضمان قص الصمت تماماً
             let startIdx = 0;
             let endIdx = channel.length - 1;
 
-            // إيجاد بداية الصوت الفعلي
             for (let i = 0; i < channel.length; i++) {
                 if (Math.abs(channel[i]) > threshold) {
-                    startIdx = Math.max(0, i - 200); // ترك مسافة صغيرة جداً لكي لا يقتطع الحرف الأول
+                    startIdx = Math.max(0, i - 50); 
                     break;
                 }
             }
 
-            // إيجاد نهاية الصوت الفعلي
             for (let i = channel.length - 1; i >= 0; i--) {
                 if (Math.abs(channel[i]) > threshold) {
-                    endIdx = Math.min(channel.length - 1, i + 200);
+                    endIdx = Math.min(channel.length - 1, i + 50);
                     break;
                 }
             }
 
             if (startIdx >= endIdx) return buffer;
 
-            // إنشاء Buffer جديد بدون الفراغات الصامتة
             const newBuffer = audioCtx.createBuffer(buffer.numberOfChannels, endIdx - startIdx, buffer.sampleRate);
             for (let c = 0; c < buffer.numberOfChannels; c++) {
                 const oldData = buffer.getChannelData(c);
@@ -379,7 +376,6 @@
                 const arrayBuffer = await response.arrayBuffer();
                 let decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
                 
-                // تطبيق ميزة قص الصمت تلقائياً لإلغاء أي Gap داخلي في الملف
                 decodedBuffer = trimSilence(decodedBuffer);
 
                 audioBufferCache[fileName] = decodedBuffer;
@@ -395,27 +391,48 @@
             }
         }
 
-        // تشغيل متداخل ومتقارب (Overlap جزئي بمقدار 0.03 ثانية لتجنب أي شعور بالفراغ)
-        async function playSeamlessSequence(fileList) {
+        // دمج جميع المقاطع الصوتية في ملف واحد متصل (Master Buffer) داخل الذاكرة لإلغاء أي Gap بنسبة 100%
+        async function playMergedSequence(fileList) {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') {
                 await audioCtx.resume();
             }
 
-            let startTime = audioCtx.currentTime;
+            let loadedBuffers = [];
+            let totalLength = 0;
+            let sampleRate = audioCtx.sampleRate;
+            let numberOfChannels = 1;
 
             for (const file of fileList) {
                 let buffer = await loadAudioBuffer(file);
                 if (buffer) {
-                    const source = audioCtx.createBufferSource();
-                    source.buffer = buffer;
-                    source.connect(audioCtx.destination);
-                    
-                    source.start(startTime);
-                    // تقديم الوقت قليلاً بمقدار 0.03 ثانية لدمج الكلمات ببعضها بشكل طبيعي وبدون فراغ صامت
-                    startTime += buffer.duration - 0.03; 
+                    loadedBuffers.push(buffer);
+                    totalLength += buffer.length;
+                    sampleRate = buffer.sampleRate;
+                    numberOfChannels = Math.max(numberOfChannels, buffer.numberOfChannels);
                 }
             }
+
+            if (loadedBuffers.length === 0) return;
+
+            // إنشاء ملف صوتي عملاق واحد يدمج كل الجملة مباشرة
+            const masterBuffer = audioCtx.createBuffer(numberOfChannels, totalLength, sampleRate);
+            
+            for (let c = 0; c < numberOfChannels; c++) {
+                const masterData = masterBuffer.getChannelData(c);
+                let offset = 0;
+                for (const buf of loadedBuffers) {
+                    const sourceData = buf.getChannelData(c % buf.numberOfChannels);
+                    masterData.set(sourceData, offset);
+                    offset += buf.length;
+                }
+            }
+
+            // تشغيل الملف المدمج دفعة واحدة بدون أي فجوات نهائياً
+            const source = audioCtx.createBufferSource();
+            source.buffer = masterBuffer;
+            source.connect(audioCtx.destination);
+            source.start(0);
         }
 
         function sendCall() {
@@ -472,7 +489,7 @@
                     data.clinicAudioFile
                 ];
 
-                await playSeamlessSequence(sequence);
+                await playMergedSequence(sequence);
 
                 document.getElementById('mainPatient').innerText = data.patientNumber;
                 document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
@@ -486,7 +503,7 @@
                 setTimeout(() => {
                     isCalling = false;
                     processQueue();
-                }, 3500);
+                }, 4000);
             }
         }
 
@@ -544,7 +561,7 @@
                 document.getElementById('adminLoginSection').style.display = 'none';
                 document.getElementById('adminActionsSection').style.display = 'block';
                 document.getElementById('adminToggleBtn').innerText = '✕';
-                updateClinicsUI();
+                    updateClinicsUI();
             } else {
                 alert('الرقم السري غير صحيح!');
             }
