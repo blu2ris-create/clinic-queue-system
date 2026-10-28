@@ -128,7 +128,6 @@
     </div>
 
     <script>
-        const broadcastChannel = new BroadcastChannel('umran_clinic_sync_channel');
         let isScreenActive = false;
         let isCalling = false;
         let callQueue = [];
@@ -138,7 +137,6 @@
         let audioCtx = null;
         const audioBufferCache = {};
 
-        // قائمة عيادات مركز الصالحية الثابتة والموحدة لجميع الأجهزة
         const fixedClinicsMap = {
             "عيادة طب الأسرة 1": "lab.mp3",
             "عيادة طب الأسرة 2": "lab.mp3",
@@ -182,6 +180,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             updateClinicsUI();
             updateLiveDate();
+            loadArchive();
 
             document.getElementById('btnDisplay').addEventListener('click', () => {
                 document.getElementById('roleSelector').style.display = 'none';
@@ -218,12 +217,15 @@
             document.getElementById('btnReload').addEventListener('click', () => location.reload());
         });
 
-        broadcastChannel.onmessage = (event) => {
-            const msg = event.data;
-            if (msg.type === 'NEW_CALL' && isScreenActive) {
-                handleIncomingCall(msg.data);
+        // الاستماع لأي نداء جديد يتم تخزينه في التخزين المحلي (يدعم الأجهزة المختلفة عبر المتصفح)
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'umran_latest_call' && event.newValue && isScreenActive) {
+                try {
+                    const data = JSON.parse(event.newValue);
+                    handleIncomingCall(data);
+                } catch(e) {}
             }
-        };
+        });
 
         function handleIncomingCall(data) {
             if (data.id > lastProcessedId) {
@@ -300,7 +302,8 @@
                 clinicAudioFile: clinicAudioFile
             };
 
-            broadcastChannel.postMessage({ type: 'NEW_CALL', data: callData });
+            // حفظ النداء في التخزين المحلي ليتم التقاطه فوراً في شاشة العرض
+            localStorage.setItem('umran_latest_call', JSON.stringify(callData));
             handleIncomingCall(callData);
 
             const msg = document.getElementById('successMsg');
