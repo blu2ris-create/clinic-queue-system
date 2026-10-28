@@ -185,6 +185,7 @@
     <script>
         const brokerUrl = 'wss://broker.hivemq.com:8884/mqtt';
         const uniqueTopic = 'umran_health_cluster_ksa_2026_secure_calls';
+        const clinicsTopic = 'umran_health_cluster_ksa_2026_clinics_sync';
         const clientId = 'client_' + Math.random().toString(16).substr(2, 8);
         
         let client = null;
@@ -214,9 +215,13 @@
             return defaultClinicsMap;
         }
 
-        function saveClinicsMap(map) {
+        function saveClinicsMap(map, broadcast = true) {
             localStorage.setItem('umran_clinics_map', JSON.stringify(map));
             updateClinicsUI();
+            
+            if (broadcast && client && client.connected) {
+                client.publish(clinicsTopic, JSON.stringify(map));
+            }
         }
 
         function updateClinicsUI() {
@@ -226,7 +231,11 @@
             const keys = Object.keys(clinicsMap);
 
             if (select) {
+                const currentSelected = select.value;
                 select.innerHTML = keys.map(c => `<option value="${c}">${c}</option>`).join('');
+                if (keys.includes(currentSelected)) {
+                    select.value = currentSelected;
+                }
             }
             if (tagsList) {
                 tagsList.innerHTML = keys.map((c) => `
@@ -273,20 +282,6 @@
                     document.getElementById('fullscreenBtn').style.display = 'none';
                 }
             });
-
-            window.addEventListener('storage', (event) => {
-                if (event.key === 'umran_latest_call_event' && isScreenActive) {
-                    try {
-                        const data = JSON.parse(event.newValue);
-                        if (data && data.id > lastProcessedId) {
-                            lastProcessedId = data.id;
-                            localStorage.setItem('umran_last_processed_id', lastProcessedId);
-                            callQueue.push(data);
-                            processQueue();
-                        }
-                    } catch(e) {}
-                }
-            });
         });
 
         function requestFullscreen() {
@@ -297,12 +292,24 @@
         if (client) {
             client.on('connect', () => {
                 client.subscribe(uniqueTopic);
+                client.subscribe(clinicsTopic);
             });
 
             client.on('message', (topic, message) => {
+                const payloadStr = message.toString();
+                
+                if (topic === clinicsTopic) {
+                    try {
+                        const remoteClinicsMap = JSON.parse(payloadStr);
+                        if (remoteClinicsMap && typeof remoteClinicsMap === 'object') {
+                            saveClinicsMap(remoteClinicsMap, false); // تحديث محلي بدون عمل Broadcast لتجنب حلقة التحديثات
+                        }
+                    } catch(e) {}
+                }
+
                 if (topic === uniqueTopic && isScreenActive) {
                     try {
-                        const data = JSON.parse(message.toString());
+                        const data = JSON.parse(payloadStr);
                         if (data.id > lastProcessedId) {
                             lastProcessedId = data.id;
                             localStorage.setItem('umran_last_processed_id', lastProcessedId);
@@ -335,16 +342,15 @@
             preloadAudioBuffers(["ding.mp3", "please_wait.mp3", "goto.mp3"]);
         }
 
-        // دالة قص الصمت المطور لإزالة أي فراغات داخلية أو أطراف فارغة في الملفات الصوتية بنسبة 100%
         function trimSilence(buffer) {
             const channel = buffer.getChannelData(0);
-            const threshold = 0.02; // عتبة حساسة جداً لإزالة الصمت الحقيقي
+            const threshold = 0.02;
             let startIdx = 0;
             let endIdx = channel.length - 1;
 
             for (let i = 0; i < channel.length; i++) {
                 if (Math.abs(channel[i]) > threshold) {
-                    startIdx = Math.max(0, i - 10); // إبقاء 10 عينات فقط لمنع أي طقطقة
+                    startIdx = Math.max(0, i - 10);
                     break;
                 }
             }
@@ -391,7 +397,6 @@
             }
         }
 
-        // دمج الصوتيات في ملف واحد متصل تماماً (Master Buffer) بدون أي وقت انتظار أو فجوات نهائياً
         async function playMergedSequence(fileList) {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') {
@@ -460,8 +465,6 @@
                 client.publish(uniqueTopic, JSON.stringify(callData));
             }
 
-            localStorage.setItem('umran_latest_call_event', JSON.stringify(callData));
-
             const msg = document.getElementById('successMsg');
             msg.style.display = 'block';
             setTimeout(() => { msg.style.display = 'none'; }, 2000);
@@ -490,123 +493,4 @@
                 await playMergedSequence(sequence);
 
                 document.getElementById('mainPatient').innerText = data.patientNumber;
-                document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
-
-                saveToArchive(data);
-            } catch (error) {
-                document.getElementById('mainPatient').innerText = data.patientNumber;
-                document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
-                saveToArchive(data);
-            } finally {
-                setTimeout(() => {
-                    isCalling = false;
-                    processQueue();
-                }, 3000); // تقليص وقت الانتظار بين النداءات لتسريع الاستجابة
-            }
-        }
-
-        function saveToArchive(data) {
-            let archive = JSON.parse(localStorage.getItem('umran_health_archive') || '[]');
-            const currentTime = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            
-            archive.unshift({ name: data.patientNumber, clinic: data.clinicName, time: currentTime });
-            if (archive.length > 10) archive.pop();
-
-            localStorage.setItem('umran_health_archive', JSON.stringify(archive));
-            renderArchive(archive);
-        }
-
-        function loadArchive() {
-            let archive = JSON.parse(localStorage.getItem('umran_health_archive') || '[]');
-            renderArchive(archive);
-        }
-
-        function renderArchive(archive) {
-            const tbody = document.getElementById('archiveTableBody');
-            if (!tbody) return;
-            if (archive.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="text-muted">لا توجد نداءات مسجلة</td></tr>`;
-                return;
-            }
-            tbody.innerHTML = archive.map(item => `
-                <tr>
-                    <td class="fw-bold text-warning">${item.name}</td>
-                    <td class="text-light">${item.clinic}</td>
-                    <td class="text-info">${item.time}</td>
-                </tr>
-            `).join('');
-        }
-
-        function toggleAdminPanel() {
-            const panel = document.getElementById('adminPanel');
-            const btn = document.getElementById('adminToggleBtn');
-            
-            if (panel.style.display === 'block') {
-                panel.style.display = 'none';
-                btn.innerText = isAdminLoggedIn ? '✕' : '⚙️';
-            } else {
-                panel.style.display = 'block';
-                btn.innerText = '✕';
-            }
-        }
-
-        function verifyAdmin() {
-            const pin = document.getElementById('adminPin').value;
-            const currentPin = localStorage.getItem('umran_admin_pin') || '123456';
-
-            if (pin === currentPin) {
-                isAdminLoggedIn = true;
-                document.getElementById('adminLoginSection').style.display = 'none';
-                document.getElementById('adminActionsSection').style.display = 'block';
-                document.getElementById('adminToggleBtn').innerText = '✕';
-                updateClinicsUI();
-            } else {
-                alert('الرقم السري غير صحيح!');
-            }
-        }
-
-        function addClinic() {
-            const input = document.getElementById('newClinicName');
-            const val = input.value.trim();
-            if (!val) return;
-
-            let clinicsMap = getClinicsMap();
-            let cName = prompt("أدخل اسم العيادة المعروض على الشاشة:", val);
-            let cFileName = prompt("أدخل اسم ملف الصوت المرفوع (مثل dental.mp3):", "lab.mp3");
-
-            if (cName && cFileName) {
-                clinicsMap[cName] = cFileName.trim();
-                saveClinicsMap(clinicsMap);
-                input.value = '';
-            }
-        }
-
-        function editClinicFile(clinicKey) {
-            let clinicsMap = getClinicsMap();
-            let currentFileName = clinicsMap[clinicKey];
-            let newFileName = prompt(`أدخل اسم ملف الصوت الجديد لـ (${clinicKey}):`, currentFileName);
-            if (newFileName) {
-                clinicsMap[clinicKey] = newFileName.trim();
-                saveClinicsMap(clinicsMap);
-                alert('تم تحديث اسم ملف الصوت للعيادة بنجاح!');
-            }
-        }
-
-        function removeClinic(clinicKey) {
-            let clinicsMap = getClinicsMap();
-            Object.keys(clinicsMap).length <= 1 ? alert('يجب أن تبقى عيادة واحدة على الأقل!') : delete clinicsMap[clinicKey];
-            saveClinicsMap(clinicsMap);
-        }
-
-        function changePin() {
-            const newPin = document.getElementById('newPinInput').value.trim();
-            if (newPin.length < 3) {
-                alert('الرقم السري لا يقل عن 3 خانات');
-                return;
-            }
-            localStorage.setItem('umran_admin_pin', newPin);
-            alert('تم تغيير الرقم السري بنجاح!');
-        }
-    </script>
-</body>
-</html>
+                document.getElementById('
