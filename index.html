@@ -43,7 +43,6 @@
 </head>
 <body>
 
-    <!-- شاشة اختيار الدور -->
     <div id="roleSelector">
         <div class="mode-card">
             <h3 style="color: #ffc107; margin-bottom: 5px;">مركز صحي الصالحية</h3>
@@ -53,7 +52,6 @@
         </div>
     </div>
 
-    <!-- نافذة تفعيل الشاشة الصوتية -->
     <div id="displayOverlay">
         <div class="activate-box">
             <h2 style="color: #ffc107; margin-bottom: 10px;">تشغيل الشاشة الصوتية</h2>
@@ -62,7 +60,6 @@
         </div>
     </div>
 
-    <!-- واجهة الشاشة الكبرى -->
     <div id="displayScreen">
         <div class="top-header">
             <img src="https://github.com/blu2ris-create/clinic-queue-system/blob/main/logo.png%20(2).png?raw=true" alt="الشعار" class="cluster-logo">
@@ -101,7 +98,6 @@
         </div>
     </div>
 
-    <!-- لوحة التحكم -->
     <div id="controlScreen">
         <div class="control-card">
             <h3 style="text-align: center; color: #ffc107; margin-bottom: 5px; font-size: 1.2rem;">لوحة التحكم</h3>
@@ -137,25 +133,26 @@
         let audioCtx = null;
         const audioBufferCache = {};
 
+        // ربط العيادات بأسماء ملفات الصوت الفعلية المطابقة لمستودعك على GitHub
         const fixedClinicsMap = {
-            "عيادة طب الأسرة 1": "lab.mp3",
-            "عيادة طب الأسرة 2": "lab.mp3",
-            "عيادة طب الأسرة 3": "lab.mp3",
-            "عيادة طب الأسرة 4": "lab.mp3",
-            "عيادة طب الأسرة 5": "lab.mp3",
-            "عيادة طب الأسرة 6": "lab.mp3",
-            "عيادة طب الأسرة 7": "lab.mp3",
-            "عيادة طب الأسرة 8": "lab.mp3",
-            "عيادة طب الأسرة 9": "lab.mp3",
-            "عيادة طب الأسنان 1": "dental.mp3",
-            "عيادة طب الأسنان 2": "dental.mp3",
-            "عيادة التطعيم": "lab.mp3",
-            "المدرب الصحي": "lab.mp3",
-            "الضماد": "lab.mp3",
-            "العلامات الحيوية": "lab.mp3",
+            "عيادة طب الأسرة 1": "family.1.mp3",
+            "عيادة طب الأسرة 2": "family.2.mp3",
+            "عيادة طب الأسرة 3": "family.3.mp3",
+            "عيادة طب الأسرة 4": "family.4.mp3",
+            "عيادة طب الأسرة 5": "family.5.mp3",
+            "عيادة طب الأسرة 6": "family.6.mp3",
+            "عيادة طب الأسرة 7": "family.7.mp3",
+            "عيادة طب الأسرة 8": "family.8.mp3",
+            "عيادة طب الأسرة 9": "family.9.mp3",
+            "عيادة طب الأسنان 1": "dental.1.mp3",
+            "عيادة طب الأسنان 2": "dental.2.mp3",
+            "عيادة التطعيم": "vaccine.mp3",
+            "المدرب الصحي": "coach.mp3",
+            "الضماد": "Wound.mp3",
+            "العلامات الحيوية": "vitals.mp3",
             "سحب الدم": "lab.mp3",
-            "متابعة الحوامل": "lab.mp3",
-            "قسم الأشعة": "lab.mp3"
+            "متابعة الحوامل": "pregnancy.mp3",
+            "قسم الأشعة": "Xray.mp3"
         };
 
         function updateClinicsUI() {
@@ -217,7 +214,6 @@
             document.getElementById('btnReload').addEventListener('click', () => location.reload());
         });
 
-        // الاستماع لأي نداء جديد يتم تخزينه في التخزين المحلي (يدعم الأجهزة المختلفة عبر المتصفح)
         window.addEventListener('storage', (event) => {
             if (event.key === 'umran_latest_call' && event.newValue && isScreenActive) {
                 try {
@@ -302,7 +298,6 @@
                 clinicAudioFile: clinicAudioFile
             };
 
-            // حفظ النداء في التخزين المحلي ليتم التقاطه فوراً في شاشة العرض
             localStorage.setItem('umran_latest_call', JSON.stringify(callData));
             handleIncomingCall(callData);
 
