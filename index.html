@@ -8,19 +8,15 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
         body { background-color: #0b0f19; color: white; height: 100vh; width: 100vw; overflow: hidden; }
         
-        /* شاشة اختيار الدور */
         #roleSelector { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0f19; z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .mode-card { background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 30px; text-align: center; max-width: 480px; width: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
-        .btn-mode { font-size: 1.1rem; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; margin-bottom: 15px; background: #ffc107; color: #0b0f19; border: none; cursor: pointer; transition: 0.2s; }
-        .btn-mode:active { transform: scale(0.98); }
+        .btn-mode { font-size: 1.1rem; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; margin-bottom: 15px; background: #ffc107; color: #0b0f19; border: none; cursor: pointer; }
         .btn-mode.alt { background: transparent; border: 2px solid #38bdf8; color: #38bdf8; }
 
-        /* نافذة تفعيل الشاشة الصوتية */
         #displayOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7, 10, 17, 0.98); z-index: 99998; display: none; justify-content: center; align-items: center; flex-direction: column; }
         .activate-box { background: #151c2c; border: 2px solid #334155; padding: 40px; border-radius: 20px; text-align: center; max-width: 480px; width: 90%; }
         .btn-activate { background: #ffc107; color: #0b0f19; border: none; font-weight: bold; font-size: 1.2rem; padding: 15px 30px; border-radius: 50px; cursor: pointer; margin-top: 20px; }
 
-        /* شاشة العرض الرئيسية */
         #displayScreen { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 10; padding: 20px; flex-direction: column; justify-content: space-between; }
         .top-header { display: flex; justify-content: flex-end; align-items: center; width: 100%; border-bottom: 2px solid #1e293b; padding-bottom: 10px; }
         .cluster-logo { height: 80px; width: auto; object-fit: contain; }
@@ -36,7 +32,6 @@
         .display-number { font-size: 6rem; font-weight: bold; color: #ffc107; line-height: 1; margin-bottom: 10px; }
         .display-text { font-size: 2rem; color: #e2e8f0; font-weight: bold; }
 
-        /* لوحة التحكم */
         #controlScreen { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 20; padding: 20px; overflow-y: auto; justify-content: center; align-items: center; }
         .control-card { background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 30px; max-width: 500px; width: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.6); position: relative; margin: auto; }
         .form-group { margin-bottom: 15px; text-align: right; }
@@ -57,8 +52,8 @@
         <div class="mode-card">
             <h3 style="color: #ffc107; margin-bottom: 5px;">مركز صحي الصالحية</h3>
             <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 25px;">نظام إدارة النداء الآلي والطوابير</p>
-            <button class="btn-mode" onclick="openScreen('display')">🖥️ شاشة عرض رئيسية</button>
-            <button class="btn-mode alt" onclick="openScreen('control')">📱 لوحة تحكم (جوال/كمبيوتر)</button>
+            <button id="btnDisplay" class="btn-mode">🖥️ شاشة عرض رئيسية</button>
+            <button id="btnControl" class="btn-mode alt">📱 لوحة تحكم (جوال/كمبيوتر)</button>
         </div>
     </div>
 
@@ -67,7 +62,7 @@
         <div class="activate-box">
             <h2 style="color: #ffc107; margin-bottom: 10px;">تشغيل الشاشة الصوتية</h2>
             <p style="color: #cbd5e1; font-size: 0.9rem;">انقر للبدء وتفعيل النظام الصوتي وملء الشاشة</p>
-            <button class="btn-activate" onclick="activateDisplayScreen()">تفعيل وبدء النظام 🔊</button>
+            <button id="btnActivate" class="btn-activate">تفعيل وبدء النظام 🔊</button>
         </div>
     </div>
 
@@ -113,7 +108,7 @@
     <!-- لوحة التحكم -->
     <div id="controlScreen">
         <div class="control-card">
-            <button id="adminToggleBtn" class="admin-gear-btn" onclick="toggleAdminPanel()" title="إعدادات">⚙️</button>
+            <button id="adminToggleBtn" class="admin-gear-btn" title="إعدادات">⚙️</button>
             
             <h3 style="text-align: center; color: #ffc107; margin-bottom: 5px; font-size: 1.2rem;">لوحة التحكم</h3>
             <p style="text-align: center; color: #94a3b8; font-size: 0.8rem; margin-bottom: 15px;">مركز صحي الصالحية</p>
@@ -128,7 +123,7 @@
                 <select id="clinicSelect" class="form-select"></select>
             </div>
 
-            <button class="btn-call" onclick="sendCall()">إصدار النداء 🔊</button>
+            <button id="btnSendCall" class="btn-call">إصدار النداء 🔊</button>
             
             <div id="successMsg" style="background: #065f46; color: #34d399; text-align: center; padding: 8px; border-radius: 8px; font-weight: bold; margin-top: 10px; display: none;">تم الإرسال بنجاح! ✓</div>
 
@@ -137,7 +132,7 @@
                 <div id="adminLoginSection">
                     <div style="display: flex; gap: 5px;">
                         <input type="password" id="adminPin" class="form-control" placeholder="الرقم السري (123456)">
-                        <button class="btn-mode" style="width: 70px; padding: 0; margin: 0; font-size: 0.85rem;" onclick="verifyAdmin()">دخول</button>
+                        <button id="btnVerifyAdmin" class="btn-mode" style="width: 70px; padding: 0; margin: 0; font-size: 0.85rem;">دخول</button>
                     </div>
                 </div>
                 <div id="adminActionsSection" style="display: none;">
@@ -145,7 +140,7 @@
                         <label class="form-label" style="font-size: 0.8rem;">إضافة عيادة:</label>
                         <div style="display: flex; gap: 5px;">
                             <input type="text" id="newClinicName" class="form-control" placeholder="اسم العيادة...">
-                            <button class="btn-mode" style="width: 60px; padding: 0; margin: 0; font-size: 0.8rem; background: #10b981; color: white;" onclick="addClinic()">إضافة</button>
+                            <button id="btnAddClinic" class="btn-mode" style="width: 60px; padding: 0; margin: 0; font-size: 0.8rem; background: #10b981; color: white;">إضافة</button>
                         </div>
                     </div>
                     <div class="form-group" style="margin-bottom: 8px;">
@@ -156,7 +151,7 @@
             </div>
 
             <div style="text-align: center; margin-top: 15px;">
-                <button onclick="location.reload()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">تغيير وضع الجهاز</button>
+                <button id="btnReload" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">تغيير وضع الجهاز</button>
             </div>
         </div>
     </div>
@@ -204,9 +199,16 @@
                 tagsList.innerHTML = keys.map((c) => `
                     <div class="clinic-tag">
                         <span><b>${c}</b><br><span style="color: #ffc107; font-size: 0.7rem;">${clinicsMap[c]}</span></span>
-                        <button onclick="removeClinic('${c}')">✕</button>
+                        <button class="remove-clinic-btn" data-key="${c}">✕</button>
                     </div>
                 `).join('');
+
+                // ربط أحداث الحذف ديناميكياً
+                document.querySelectorAll('.remove-clinic-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        removeClinic(this.getAttribute('data-key'));
+                    });
+                });
             }
         }
 
@@ -221,6 +223,44 @@
         document.addEventListener('DOMContentLoaded', () => {
             updateClinicsUI();
             updateLiveDate();
+
+            // ربط الأزرار مباشرة بالبرمجية لمنع أي فشل في الاستجابة
+            document.getElementById('btnDisplay').addEventListener('click', () => {
+                document.getElementById('roleSelector').style.display = 'none';
+                document.getElementById('displayOverlay').style.display = 'flex';
+            });
+
+            document.getElementById('btnControl').addEventListener('click', () => {
+                document.getElementById('roleSelector').style.display = 'none';
+                document.getElementById('controlScreen').style.display = 'flex';
+                updateClinicsUI();
+            });
+
+            document.getElementById('btnActivate').addEventListener('click', async () => {
+                isScreenActive = true;
+                document.getElementById('displayOverlay').style.display = 'none';
+                document.getElementById('displayScreen').style.display = 'flex';
+                
+                try {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(err => {});
+                    }
+                } catch(e) {}
+
+                try {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContextClass();
+                    if (audioCtx.state === 'suspended') {
+                        await audioCtx.resume();
+                    }
+                } catch(e) {}
+            });
+
+            document.getElementById('btnSendCall').addEventListener('click', sendCall);
+            document.getElementById('adminToggleBtn').addEventListener('click', toggleAdminPanel);
+            document.getElementById('btnVerifyAdmin').addEventListener('click', verifyAdmin);
+            document.getElementById('btnAddClinic').addEventListener('click', addClinic);
+            document.getElementById('btnReload').addEventListener('click', () => location.reload());
         });
 
         broadcastChannel.onmessage = (event) => {
@@ -241,10 +281,174 @@
             }
         }
 
-        function openScreen(mode) {
-            const roleSelector = document.getElementById('roleSelector');
-            if (roleSelector) roleSelector.style.display = 'none';
+        async function loadAudioBuffer(fileName) {
+            if (audioBufferCache[fileName]) return audioBufferCache[fileName];
+            if (!audioCtx) return null;
+            try {
+                const response = await fetch(voicesBaseUrl + fileName);
+                const arrayBuffer = await response.arrayBuffer();
+                let decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                audioBufferCache[fileName] = decodedBuffer;
+                return decodedBuffer;
+            } catch (e) {
+                return null;
+            }
+        }
 
-            if (mode === 'display') {
-                const overlay = document.getElementById('displayOverlay');
-                if (overlay) overlay.style.display = 'flex';
+        async function playMergedSequence(fileList) {
+            if (!audioCtx) return;
+            let loadedBuffers = [];
+            let totalLength = 0;
+            let sampleRate = audioCtx.sampleRate;
+
+            for (const file of fileList) {
+                let buffer = await loadAudioBuffer(file);
+                if (buffer) {
+                    loadedBuffers.push(buffer);
+                    totalLength += buffer.length;
+                    sampleRate = buffer.sampleRate;
+                }
+            }
+
+            if (loadedBuffers.length === 0) return;
+
+            const masterBuffer = audioCtx.createBuffer(1, totalLength, sampleRate);
+            const masterData = masterBuffer.getChannelData(0);
+            let offset = 0;
+            for (const buf of loadedBuffers) {
+                masterData.set(buf.getChannelData(0), offset);
+                offset += buf.length;
+            }
+
+            const source = audioCtx.createBufferSource();
+            source.buffer = masterBuffer;
+            source.connect(audioCtx.destination);
+            source.start(0);
+        }
+
+        function sendCall() {
+            const input = document.getElementById('patientNumberInput');
+            const patientNum = input.value.trim();
+            const clinicSelect = document.getElementById('clinicSelect');
+            const clinicName = clinicSelect.value;
+            const clinicsMap = getClinicsMap();
+            const clinicAudioFile = clinicsMap[clinicName] || 'lab.mp3';
+
+            if (!patientNum) {
+                alert('الرجاء إدخال رقم المراجع');
+                input.focus();
+                return;
+            }
+
+            const callData = {
+                id: Date.now(),
+                patientNumber: patientNum,
+                patientAudioFile: patientNum + '.mp3',
+                clinicName: clinicName,
+                clinicAudioFile: clinicAudioFile
+            };
+
+            broadcastChannel.postMessage({ type: 'NEW_CALL', data: callData });
+            handleIncomingCall(callData);
+
+            const msg = document.getElementById('successMsg');
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 2000);
+            
+            input.value = '';
+            input.focus();
+        }
+
+        async function processQueue() {
+            if (isCalling || callQueue.length === 0) return;
+            isCalling = true;
+            const data = callQueue.shift();
+
+            try {
+                const sequence = ["ding.mp3", "please_wait.mp3", data.patientAudioFile, "goto.mp3", data.clinicAudioFile];
+                await playMergedSequence(sequence);
+
+                document.getElementById('mainPatient').innerText = data.patientNumber;
+                document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
+                saveToArchive(data);
+            } catch (error) {
+                document.getElementById('mainPatient').innerText = data.patientNumber;
+                document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
+                saveToArchive(data);
+            } finally {
+                setTimeout(() => {
+                    isCalling = false;
+                    processQueue();
+                }, 3000);
+            }
+        }
+
+        function saveToArchive(data) {
+            let archive = JSON.parse(localStorage.getItem('umran_health_archive') || '[]');
+            const currentTime = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            archive.unshift({ name: data.patientNumber, clinic: data.clinicName, time: currentTime });
+            if (archive.length > 10) archive.pop();
+            localStorage.setItem('umran_health_archive', JSON.stringify(archive));
+            renderArchive(archive);
+        }
+
+        function loadArchive() {
+            let archive = JSON.parse(localStorage.getItem('umran_health_archive') || '[]');
+            renderArchive(archive);
+        }
+
+        function renderArchive(archive) {
+            const tbody = document.getElementById('archiveTableBody');
+            if (!tbody) return;
+            if (archive.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="color: #94a3b8;">لا توجد نداءات</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = archive.map(item => `
+                <tr>
+                    <td style="color: #ffc107; font-weight: bold;">${item.name}</td>
+                    <td>${item.clinic}</td>
+                    <td style="color: #38bdf8;">${item.time}</td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleAdminPanel() {
+            const panel = document.getElementById('adminPanel');
+            if (panel) panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function verifyAdmin() {
+            const pin = document.getElementById('adminPin').value;
+            const currentPin = localStorage.getItem('umran_admin_pin') || '123456';
+            if (pin === currentPin) {
+                document.getElementById('adminLoginSection').style.display = 'none';
+                document.getElementById('adminActionsSection').style.display = 'block';
+                updateClinicsUI();
+            } else {
+                alert('الرقم السري غير صحيح!');
+            }
+        }
+
+        function addClinic() {
+            const cName = prompt("أدخل اسم العيادة الجديدة:");
+            const cFileName = prompt("أدخل اسم ملف الصوت (مثل dental.mp3):", "lab.mp3");
+            if (cName && cFileName) {
+                let clinicsMap = getClinicsMap();
+                clinicsMap[cName.trim()] = cFileName.trim();
+                saveClinicsMap(clinicsMap, true);
+            }
+        }
+
+        function removeClinic(clinicKey) {
+            let clinicsMap = getClinicsMap();
+            if (Object.keys(clinicsMap).length <= 1) {
+                alert('يجب أن تبقى عيادة واحدة على الأقل!');
+                return;
+            }
+            delete clinicsMap[clinicKey];
+            saveClinicsMap(clinicsMap, true);
+        }
+    </script>
+</body>
+</html>
