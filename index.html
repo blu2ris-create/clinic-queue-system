@@ -38,10 +38,6 @@
         .form-label { color: #38bdf8; font-weight: bold; margin-bottom: 6px; display: block; }
         .form-control, .form-select { background-color: #0b0f19; border: 1px solid #334155; color: white; padding: 12px; border-radius: 10px; width: 100%; text-align: center; font-size: 1.1rem; outline: none; }
         .btn-call { background-color: #ffc107; border: none; color: #0b0f19; font-weight: bold; padding: 14px; font-size: 1.2rem; border-radius: 10px; width: 100%; cursor: pointer; margin-top: 10px; }
-        .admin-gear-btn { position: absolute; top: 15px; left: 15px; background: #1e293b; border: 1px solid #334155; width: 38px; height: 38px; border-radius: 50%; font-size: 1rem; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94a3b8; }
-        #adminPanel { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #334155; background: #0f172a; padding: 12px; border-radius: 10px; }
-        .clinic-tag { display: flex; align-items: center; background: #1e293b; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; justify-content: space-between; }
-        .clinic-tag button { background: none; border: none; color: #ef4444; font-weight: bold; cursor: pointer; }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -108,8 +104,6 @@
     <!-- لوحة التحكم -->
     <div id="controlScreen">
         <div class="control-card">
-            <button id="adminToggleBtn" class="admin-gear-btn" title="إعدادات">⚙️</button>
-            
             <h3 style="text-align: center; color: #ffc107; margin-bottom: 5px; font-size: 1.2rem;">لوحة التحكم</h3>
             <p style="text-align: center; color: #94a3b8; font-size: 0.8rem; margin-bottom: 15px;">مركز صحي الصالحية</p>
             
@@ -127,30 +121,7 @@
             
             <div id="successMsg" style="background: #065f46; color: #34d399; text-align: center; padding: 8px; border-radius: 8px; font-weight: bold; margin-top: 10px; display: none;">تم الإرسال بنجاح! ✓</div>
 
-            <div id="adminPanel">
-                <h6 style="color: #ffc107; margin-bottom: 8px; font-size: 0.9rem;">🛠️ لوحة الأدمن</h6>
-                <div id="adminLoginSection">
-                    <div style="display: flex; gap: 5px;">
-                        <input type="password" id="adminPin" class="form-control" placeholder="الرقم السري (123456)">
-                        <button id="btnVerifyAdmin" class="btn-mode" style="width: 70px; padding: 0; margin: 0; font-size: 0.85rem;">دخول</button>
-                    </div>
-                </div>
-                <div id="adminActionsSection" style="display: none;">
-                    <div class="form-group" style="margin-bottom: 8px;">
-                        <label class="form-label" style="font-size: 0.8rem;">إضافة عيادة:</label>
-                        <div style="display: flex; gap: 5px;">
-                            <input type="text" id="newClinicName" class="form-control" placeholder="اسم العيادة...">
-                            <button id="btnAddClinic" class="btn-mode" style="width: 60px; padding: 0; margin: 0; font-size: 0.8rem; background: #10b981; color: white;">إضافة</button>
-                        </div>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 8px;">
-                        <label class="form-label" style="font-size: 0.8rem;">إدارة العيادات:</label>
-                        <div id="clinicsTagsList" style="max-height: 120px; overflow-y: auto; background: #0b0f19; padding: 5px; border-radius: 6px;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="text-align: center; margin-top: 15px;">
+            <div style="text-align: center; margin-top: 20px;">
                 <button id="btnReload" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">تغيير وضع الجهاز</button>
             </div>
         </div>
@@ -167,48 +138,36 @@
         let audioCtx = null;
         const audioBufferCache = {};
 
-        function getClinicsMap() {
-            let stored = localStorage.getItem('umran_clinics_map');
-            if (stored) return JSON.parse(stored);
-            return {
-                "غرفة سحب الدم": "lab.mp3",
-                "عيادة طب الأسنان": "dental.mp3"
-            };
-        }
-
-        function saveClinicsMap(map, broadcast = true) {
-            localStorage.setItem('umran_clinics_map', JSON.stringify(map));
-            updateClinicsUI();
-            if (broadcast) {
-                broadcastChannel.postMessage({ type: 'CLINICS_UPDATE', map: map });
-            }
-        }
+        // قائمة عيادات مركز الصالحية الثابتة والموحدة لجميع الأجهزة
+        const fixedClinicsMap = {
+            "عيادة طب الأسرة 1": "lab.mp3",
+            "عيادة طب الأسرة 2": "lab.mp3",
+            "عيادة طب الأسرة 3": "lab.mp3",
+            "عيادة طب الأسرة 4": "lab.mp3",
+            "عيادة طب الأسرة 5": "lab.mp3",
+            "عيادة طب الأسرة 6": "lab.mp3",
+            "عيادة طب الأسرة 7": "lab.mp3",
+            "عيادة طب الأسرة 8": "lab.mp3",
+            "عيادة طب الأسرة 9": "lab.mp3",
+            "عيادة طب الأسنان 1": "dental.mp3",
+            "عيادة طب الأسنان 2": "dental.mp3",
+            "عيادة التطعيم": "lab.mp3",
+            "المدرب الصحي": "lab.mp3",
+            "الضمان": "lab.mp3",
+            "العلامات الحيوية": "lab.mp3",
+            "سحب الدم": "lab.mp3",
+            "متابعة الحوامل": "lab.mp3",
+            "قسم الأشعة": "lab.mp3"
+        };
 
         function updateClinicsUI() {
             const select = document.getElementById('clinicSelect');
-            const tagsList = document.getElementById('clinicsTagsList');
-            const clinicsMap = getClinicsMap();
-            const keys = Object.keys(clinicsMap);
+            const keys = Object.keys(fixedClinicsMap);
 
             if (select) {
                 const currentSelected = select.value;
                 select.innerHTML = keys.map(c => `<option value="${c}">${c}</option>`).join('');
                 if (keys.includes(currentSelected)) select.value = currentSelected;
-            }
-            if (tagsList) {
-                tagsList.innerHTML = keys.map((c) => `
-                    <div class="clinic-tag">
-                        <span><b>${c}</b><br><span style="color: #ffc107; font-size: 0.7rem;">${clinicsMap[c]}</span></span>
-                        <button class="remove-clinic-btn" data-key="${c}">✕</button>
-                    </div>
-                `).join('');
-
-                // ربط أحداث الحذف ديناميكياً
-                document.querySelectorAll('.remove-clinic-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        removeClinic(this.getAttribute('data-key'));
-                    });
-                });
             }
         }
 
@@ -224,7 +183,6 @@
             updateClinicsUI();
             updateLiveDate();
 
-            // ربط الأزرار مباشرة بالبرمجية لمنع أي فشل في الاستجابة
             document.getElementById('btnDisplay').addEventListener('click', () => {
                 document.getElementById('roleSelector').style.display = 'none';
                 document.getElementById('displayOverlay').style.display = 'flex';
@@ -257,17 +215,12 @@
             });
 
             document.getElementById('btnSendCall').addEventListener('click', sendCall);
-            document.getElementById('adminToggleBtn').addEventListener('click', toggleAdminPanel);
-            document.getElementById('btnVerifyAdmin').addEventListener('click', verifyAdmin);
-            document.getElementById('btnAddClinic').addEventListener('click', addClinic);
             document.getElementById('btnReload').addEventListener('click', () => location.reload());
         });
 
         broadcastChannel.onmessage = (event) => {
             const msg = event.data;
-            if (msg.type === 'CLINICS_UPDATE') {
-                saveClinicsMap(msg.map, false);
-            } else if (msg.type === 'NEW_CALL' && isScreenActive) {
+            if (msg.type === 'NEW_CALL' && isScreenActive) {
                 handleIncomingCall(msg.data);
             }
         };
@@ -331,8 +284,7 @@
             const patientNum = input.value.trim();
             const clinicSelect = document.getElementById('clinicSelect');
             const clinicName = clinicSelect.value;
-            const clinicsMap = getClinicsMap();
-            const clinicAudioFile = clinicsMap[clinicName] || 'lab.mp3';
+            const clinicAudioFile = fixedClinicsMap[clinicName] || 'lab.mp3';
 
             if (!patientNum) {
                 alert('الرجاء إدخال رقم المراجع');
@@ -411,43 +363,6 @@
                     <td style="color: #38bdf8;">${item.time}</td>
                 </tr>
             `).join('');
-        }
-
-        function toggleAdminPanel() {
-            const panel = document.getElementById('adminPanel');
-            if (panel) panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
-        }
-
-        function verifyAdmin() {
-            const pin = document.getElementById('adminPin').value;
-            const currentPin = localStorage.getItem('umran_admin_pin') || '123456';
-            if (pin === currentPin) {
-                document.getElementById('adminLoginSection').style.display = 'none';
-                document.getElementById('adminActionsSection').style.display = 'block';
-                updateClinicsUI();
-            } else {
-                alert('الرقم السري غير صحيح!');
-            }
-        }
-
-        function addClinic() {
-            const cName = prompt("أدخل اسم العيادة الجديدة:");
-            const cFileName = prompt("أدخل اسم ملف الصوت (مثل dental.mp3):", "lab.mp3");
-            if (cName && cFileName) {
-                let clinicsMap = getClinicsMap();
-                clinicsMap[cName.trim()] = cFileName.trim();
-                saveClinicsMap(clinicsMap, true);
-            }
-        }
-
-        function removeClinic(clinicKey) {
-            let clinicsMap = getClinicsMap();
-            if (Object.keys(clinicsMap).length <= 1) {
-                alert('يجب أن تبقى عيادة واحدة على الأقل!');
-                return;
-            }
-            delete clinicsMap[clinicKey];
-            saveClinicsMap(clinicsMap, true);
         }
     </script>
 </body>
