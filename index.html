@@ -66,6 +66,7 @@
 
     <button id="fullscreenBtn" onclick="requestFullscreen()">📺 تفعيل ملء الشاشة</button>
 
+    <!-- شاشة اختيار الدور الأساسية -->
     <div id="roleSelector">
         <div class="mode-card">
             <h3 class="text-warning fw-bold mb-2">مركز صحي الصالحية للرعاية الأولية</h3>
@@ -75,6 +76,7 @@
         </div>
     </div>
 
+    <!-- نافذة تفعيل الشاشة والصوت -->
     <div id="displayOverlay">
         <div class="text-center bg-dark p-5 rounded-4 shadow-lg border border-secondary mx-3">
             <h2 class="mb-3 text-warning fw-bold">شاشة عرض نداء المراجعين</h2>
@@ -83,6 +85,7 @@
         </div>
     </div>
 
+    <!-- واجهة شاشة العرض الرئيسية -->
     <div id="displayScreen">
         <div class="top-header">
             <img src="https://github.com/blu2ris-create/clinic-queue-system/blob/main/logo.png%20(2).png?raw=true" alt="الشعار الرسمي" class="cluster-logo">
@@ -124,6 +127,7 @@
         </div>
     </div>
 
+    <!-- واجهة لوحة التحكم -->
     <div id="controlScreen">
         <button id="adminToggleBtn" class="admin-gear-btn" onclick="toggleAdminPanel()" title="إعدادات الأدمن">⚙️</button>
         
@@ -203,140 +207,4 @@
             };
         }
 
-        function saveClinicsMap(map, broadcast = true) {
-            localStorage.setItem('umran_clinics_map', JSON.stringify(map));
-            updateClinicsUI();
-            
-            if (broadcast) {
-                broadcastChannel.postMessage({ type: 'CLINICS_UPDATE', map: map });
-            }
-        }
-
-        function updateClinicsUI() {
-            const select = document.getElementById('clinicSelect');
-            const tagsList = document.getElementById('clinicsTagsList');
-            const clinicsMap = getClinicsMap();
-            const keys = Object.keys(clinicsMap);
-
-            if (select) {
-                const currentSelected = select.value;
-                select.innerHTML = keys.map(c => `<option value="${c}">${c}</option>`).join('');
-                if (keys.includes(currentSelected)) {
-                    select.value = currentSelected;
-                }
-            }
-            if (tagsList) {
-                tagsList.innerHTML = keys.map((c) => `
-                    <div class="clinic-tag">
-                        <span style="font-size: 0.85rem;"><b>${c}</b><br><span class="text-warning">ملف الصوت: ${clinicsMap[c]}</span></span>
-                        <div>
-                            <button class="btn btn-sm btn-outline-info py-0 px-1 me-1" onclick="editClinicFile('${c}')">تعديل</button>
-                            <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeClinic('${c}')">✕</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-
-        function updateLiveDate() {
-            const now = new Date();
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const dateString = now.toLocaleDateString('ar-SA', options);
-            const dateKeyString = now.toISOString().split('T')[0];
-
-            const dateElement = document.getElementById('liveDateDisplay');
-            if (dateElement) {
-                dateElement.innerText = `📅 ${dateString}`;
-            }
-
-            let lastSavedDate = localStorage.getItem('umran_system_date');
-            if (lastSavedDate !== dateKeyString) {
-                localStorage.setItem('umran_system_date', dateKeyString);
-                localStorage.setItem('umran_health_archive', JSON.stringify([]));
-                loadArchive();
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            updateClinicsUI();
-            loadArchive();
-            updateLiveDate();
-            setInterval(updateLiveDate, 60000);
-        });
-
-        broadcastChannel.onmessage = (event) => {
-            const msg = event.data;
-            if (msg.type === 'CLINICS_UPDATE') {
-                saveClinicsMap(msg.map, false);
-            } else if (msg.type === 'NEW_CALL' && isScreenActive) {
-                handleIncomingCall(msg.data);
-            }
-        };
-
-        function handleIncomingCall(data) {
-            if (data.id > lastProcessedId) {
-                lastProcessedId = data.id;
-                localStorage.setItem('umran_last_processed_id', lastProcessedId);
-                callQueue.push(data);
-                processQueue();
-            }
-        }
-
-        function startMode(mode) {
-            document.getElementById('roleSelector').style.display = 'none';
-            if (mode === 'display') {
-                document.getElementById('displayOverlay').style.display = 'flex';
-            } else {
-                document.getElementById('controlScreen').style.display = 'block';
-            }
-        }
-
-        async function activateDisplayScreen() {
-            isScreenActive = true;
-            document.getElementById('displayOverlay').style.display = 'none';
-            document.getElementById('displayScreen').style.display = 'flex';
-            
-            const elem = document.documentElement;
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen().catch(err => {});
-            }
-
-            try {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContextClass();
-                if (audioCtx.state === 'suspended') {
-                    await audioCtx.resume();
-                }
-            } catch(e) {}
-        }
-
-        async function loadAudioBuffer(fileName) {
-            if (audioBufferCache[fileName]) return audioBufferCache[fileName];
-            if (!audioCtx) return null;
-            try {
-                const response = await fetch(voicesBaseUrl + fileName);
-                const arrayBuffer = await response.arrayBuffer();
-                let decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                audioBufferCache[fileName] = decodedBuffer;
-                return decodedBuffer;
-            } catch (e) {
-                return null;
-            }
-        }
-
-        async function playMergedSequence(fileList) {
-            if (!audioCtx) return;
-            let loadedBuffers = [];
-            let totalLength = 0;
-            let sampleRate = audioCtx.sampleRate;
-
-            for (const file of fileList) {
-                let buffer = await loadAudioBuffer(file);
-                if (buffer) {
-                    loadedBuffers.push(buffer);
-                    totalLength += buffer.length;
-                    sampleRate = buffer.sampleRate;
-                }
-            }
-
-            if (loadedBuffers.
+        function saveClinicsMap(map
