@@ -45,4 +45,16 @@
         .display-text { font-size: 2.2rem; color: #e2e8f0; font-weight: bold; }
 
         #controlScreen { display: none; width: 100%; max-width: 550px; background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); position: relative; z-index: 100; margin: 20px auto; overflow-y: auto; }
-        .form-control, .form-select { background-color: #0b0f19; border: 1px solid #334155; color: white; padding: 12
+        .form-control, .form-select { background-color: #0b0f19; border: 1px solid #334155; color: white; padding: 12px; border-radius: 10px; text-align: center; font-size: 1.1rem; }
+        .form-control:focus, .form-select:focus { background-color: #0b0f19; border-color: #ffc107; color: white; box-shadow: 0 0 10px rgba(255,193,7,0.3); }
+        .form-label { color: #38bdf8; font-weight: bold; margin-bottom: 8px; display: block; text-align: right; }
+        
+        .btn-call { background-color: #ffc107; border: none; color: #0b0f19; font-weight: bold; padding: 15px; font-size: 1.2rem; border-radius: 10px; width: 100%; transition: 0.3s; cursor: pointer; }
+        .btn-call:hover { background-color: #e0a800; }
+
+        .admin-gear-btn { position: absolute; top: 15px; left: 15px; background: #1e293b; border: 1px solid #334155; width: 42px; height: 42px; border-radius: 50%; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94a3b8; transition: 0.3s; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .admin-gear-btn:hover { color: #ffc107; border-color: #ffc107; transform: rotate(90deg); }
+        
+        #adminPanel { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #334155; background: #0f172a; padding: 15px; border-radius: 12px; }
+        .clinics-scroll-box { max-height: 180px; overflow-y: auto; border: 1px solid #334155; padding: 10px; border-radius: 8px; background: #0b0f19; }
+        .clinic-tag { display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; padding: 6px 12px; border-radius: 8px; margin: 4px; font-size
