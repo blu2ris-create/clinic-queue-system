@@ -6,21 +6,24 @@
     <title>نظام نداء المراجعين - مركز صحي الصالحية</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
-        body { background-color: #0b0f19; color: white; height: 100vh; width: 100vw; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        body { background-color: #0b0f19; color: white; height: 100vh; width: 100vw; overflow: hidden; }
         
+        /* شاشة اختيار الدور */
         #roleSelector { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0f19; z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .mode-card { background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 30px; text-align: center; max-width: 480px; width: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
-        .btn-mode { font-size: 1.1rem; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; margin-bottom: 15px; background: #ffc107; color: #0b0f19; border: none; cursor: pointer; }
+        .btn-mode { font-size: 1.1rem; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; margin-bottom: 15px; background: #ffc107; color: #0b0f19; border: none; cursor: pointer; transition: 0.2s; }
+        .btn-mode:active { transform: scale(0.98); }
         .btn-mode.alt { background: transparent; border: 2px solid #38bdf8; color: #38bdf8; }
 
-        #displayOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7, 10, 17, 0.98); z-index: 9998; display: none; justify-content: center; align-items: center; flex-direction: column; }
+        /* نافذة تفعيل الشاشة الصوتية */
+        #displayOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7, 10, 17, 0.98); z-index: 99998; display: none; justify-content: center; align-items: center; flex-direction: column; }
         .activate-box { background: #151c2c; border: 2px solid #334155; padding: 40px; border-radius: 20px; text-align: center; max-width: 480px; width: 90%; }
         .btn-activate { background: #ffc107; color: #0b0f19; border: none; font-weight: bold; font-size: 1.2rem; padding: 15px 30px; border-radius: 50px; cursor: pointer; margin-top: 20px; }
 
+        /* شاشة العرض الرئيسية */
         #displayScreen { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 10; padding: 20px; flex-direction: column; justify-content: space-between; }
         .top-header { display: flex; justify-content: flex-end; align-items: center; width: 100%; border-bottom: 2px solid #1e293b; padding-bottom: 10px; }
         .cluster-logo { height: 80px; width: auto; object-fit: contain; }
-
         .content-grid { display: grid; grid-template-columns: 500px 1fr; gap: 20px; height: calc(100vh - 110px); align-items: center; }
         .sidebar { background-color: #111827; border: 1px solid #1f2937; border-radius: 15px; padding: 15px; display: flex; flex-direction: column; height: 90%; }
         .archive-title { color: #ffc107; text-align: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #374151; font-weight: bold; }
@@ -28,19 +31,18 @@
         .custom-table { width: 100%; color: white; text-align: center; border-collapse: collapse; }
         .custom-table th { background-color: #1f2937; color: #38bdf8; padding: 10px; position: sticky; top: 0; }
         .custom-table td { background-color: #151c2c; padding: 12px; border-bottom: 1px solid #1f2937; }
-
         .main-area { background: #111827; border: 1px solid #1f2937; border-radius: 15px; padding: 20px; height: 90%; display: flex; flex-direction: column; justify-content: space-around; align-items: center; text-align: center; }
         .display-box { background: #151c2c; border: 2px solid #334155; border-radius: 20px; padding: 30px; width: 100%; max-width: 700px; }
         .display-number { font-size: 6rem; font-weight: bold; color: #ffc107; line-height: 1; margin-bottom: 10px; }
         .display-text { font-size: 2rem; color: #e2e8f0; font-weight: bold; }
 
-        #controlScreen { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 20; padding: 25px; overflow-y: auto; justify-content: center; align-items: center; flex-direction: column; }
-        .control-card { background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 30px; max-width: 500px; width: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.6); position: relative; }
+        /* لوحة التحكم */
+        #controlScreen { display: none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background-color: #0b0f19; z-index: 20; padding: 20px; overflow-y: auto; justify-content: center; align-items: center; }
+        .control-card { background: #151c2c; border: 2px solid #2a344d; border-radius: 20px; padding: 30px; max-width: 500px; width: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.6); position: relative; margin: auto; }
         .form-group { margin-bottom: 15px; text-align: right; }
         .form-label { color: #38bdf8; font-weight: bold; margin-bottom: 6px; display: block; }
         .form-control, .form-select { background-color: #0b0f19; border: 1px solid #334155; color: white; padding: 12px; border-radius: 10px; width: 100%; text-align: center; font-size: 1.1rem; outline: none; }
         .btn-call { background-color: #ffc107; border: none; color: #0b0f19; font-weight: bold; padding: 14px; font-size: 1.2rem; border-radius: 10px; width: 100%; cursor: pointer; margin-top: 10px; }
-        
         .admin-gear-btn { position: absolute; top: 15px; left: 15px; background: #1e293b; border: 1px solid #334155; width: 38px; height: 38px; border-radius: 50%; font-size: 1rem; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94a3b8; }
         #adminPanel { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #334155; background: #0f172a; padding: 12px; border-radius: 10px; }
         .clinic-tag { display: flex; align-items: center; background: #1e293b; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; justify-content: space-between; }
@@ -55,12 +57,12 @@
         <div class="mode-card">
             <h3 style="color: #ffc107; margin-bottom: 5px;">مركز صحي الصالحية</h3>
             <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 25px;">نظام إدارة النداء الآلي والطوابير</p>
-            <button class="btn-mode" onclick="startMode('display')">🖥️ شاشة عرض رئيسية</button>
-            <button class="btn-mode alt" onclick="startMode('control')">📱 لوحة تحكم (جوال/كمبيوتر)</button>
+            <button class="btn-mode" onclick="openScreen('display')">🖥️ شاشة عرض رئيسية</button>
+            <button class="btn-mode alt" onclick="openScreen('control')">📱 لوحة تحكم (جوال/كمبيوتر)</button>
         </div>
     </div>
 
-    <!-- تفعيل الشاشة الصوتية -->
+    <!-- نافذة تفعيل الشاشة الصوتية -->
     <div id="displayOverlay">
         <div class="activate-box">
             <h2 style="color: #ffc107; margin-bottom: 10px;">تشغيل الشاشة الصوتية</h2>
@@ -142,4 +144,107 @@
                     <div class="form-group" style="margin-bottom: 8px;">
                         <label class="form-label" style="font-size: 0.8rem;">إضافة عيادة:</label>
                         <div style="display: flex; gap: 5px;">
-                            <input type="text" id
+                            <input type="text" id="newClinicName" class="form-control" placeholder="اسم العيادة...">
+                            <button class="btn-mode" style="width: 60px; padding: 0; margin: 0; font-size: 0.8rem; background: #10b981; color: white;" onclick="addClinic()">إضافة</button>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label class="form-label" style="font-size: 0.8rem;">إدارة العيادات:</label>
+                        <div id="clinicsTagsList" style="max-height: 120px; overflow-y: auto; background: #0b0f19; padding: 5px; border-radius: 6px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 15px;">
+                <button onclick="location.reload()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">تغيير وضع الجهاز</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const broadcastChannel = new BroadcastChannel('umran_clinic_sync_channel');
+        let isScreenActive = false;
+        let isCalling = false;
+        let callQueue = [];
+        let lastProcessedId = parseInt(localStorage.getItem('umran_last_processed_id') || '0');
+
+        const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
+        let audioCtx = null;
+        const audioBufferCache = {};
+
+        function getClinicsMap() {
+            let stored = localStorage.getItem('umran_clinics_map');
+            if (stored) return JSON.parse(stored);
+            return {
+                "غرفة سحب الدم": "lab.mp3",
+                "عيادة طب الأسنان": "dental.mp3"
+            };
+        }
+
+        function saveClinicsMap(map, broadcast = true) {
+            localStorage.setItem('umran_clinics_map', JSON.stringify(map));
+            updateClinicsUI();
+            if (broadcast) {
+                broadcastChannel.postMessage({ type: 'CLINICS_UPDATE', map: map });
+            }
+        }
+
+        function updateClinicsUI() {
+            const select = document.getElementById('clinicSelect');
+            const tagsList = document.getElementById('clinicsTagsList');
+            const clinicsMap = getClinicsMap();
+            const keys = Object.keys(clinicsMap);
+
+            if (select) {
+                const currentSelected = select.value;
+                select.innerHTML = keys.map(c => `<option value="${c}">${c}</option>`).join('');
+                if (keys.includes(currentSelected)) select.value = currentSelected;
+            }
+            if (tagsList) {
+                tagsList.innerHTML = keys.map((c) => `
+                    <div class="clinic-tag">
+                        <span><b>${c}</b><br><span style="color: #ffc107; font-size: 0.7rem;">${clinicsMap[c]}</span></span>
+                        <button onclick="removeClinic('${c}')">✕</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function updateLiveDate() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateString = now.toLocaleDateString('ar-SA', options);
+            const dateElement = document.getElementById('liveDateDisplay');
+            if (dateElement) dateElement.innerText = `📅 ${dateString}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateClinicsUI();
+            updateLiveDate();
+        });
+
+        broadcastChannel.onmessage = (event) => {
+            const msg = event.data;
+            if (msg.type === 'CLINICS_UPDATE') {
+                saveClinicsMap(msg.map, false);
+            } else if (msg.type === 'NEW_CALL' && isScreenActive) {
+                handleIncomingCall(msg.data);
+            }
+        };
+
+        function handleIncomingCall(data) {
+            if (data.id > lastProcessedId) {
+                lastProcessedId = data.id;
+                localStorage.setItem('umran_last_processed_id', lastProcessedId);
+                callQueue.push(data);
+                processQueue();
+            }
+        }
+
+        function openScreen(mode) {
+            const roleSelector = document.getElementById('roleSelector');
+            if (roleSelector) roleSelector.style.display = 'none';
+
+            if (mode === 'display') {
+                const overlay = document.getElementById('displayOverlay');
+                if (overlay) overlay.style.display = 'flex';
