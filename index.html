@@ -196,12 +196,55 @@
         let isCalling = false;
         let callQueue = [];
         let isAdminLoggedIn = false;
-        let lastProcessedId = parseInt(localStorage.getItem('umran_last_processed_id') || '0');
+
+        // الفاصل بين نهاية صوت نداء وبداية النداء التالي (15 ثانية)
+        const CALL_GAP_MS = 15000;
+        // المنطقة الزمنية: الأحساء (المملكة العربية السعودية) UTC+3
+        const CLINIC_TIMEZONE = 'Asia/Riyadh';
+        // عدد النداءات المعروضة في الجدول
+        const ARCHIVE_MAX_ITEMS = 20;
+        // معرّفات النداءات المستلمة (لمنع تكرار نفس النداء فقط، دون إسقاط أي نداء جديد)
+        const seenIds = new Set();
+
+        // حفظ الطابور في ذاكرة الجهاز حتى لا تضيع النداءات غير المنطوقة عند إعادة تحميل الشاشة
+        const QUEUE_STORAGE_KEY = 'umran_pending_queue';
+        const QUEUE_MAX_AGE_MS = 2 * 60 * 60 * 1000; // تُهمل النداءات الأقدم من ساعتين
+        let currentCall = null;
+
+        function saveQueue() {
+            try {
+                const pending = currentCall ? [currentCall, ...callQueue] : [...callQueue];
+                localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(pending));
+            } catch (e) {}
+        }
+
+        function restoreQueue() {
+            try {
+                const stored = JSON.parse(localStorage.getItem(QUEUE_STORAGE_KEY) || '[]');
+                const now = Date.now();
+                stored.forEach(item => {
+                    if (!item || !item.id || seenIds.has(item.id)) return;
+                    const ts = parseInt(String(item.id).split('_')[0]);
+                    if (ts && now - ts > QUEUE_MAX_AGE_MS) return;
+                    seenIds.add(item.id);
+                    callQueue.push(item);
+                });
+            } catch (e) {}
+            saveQueue();
+        }
 
         const voicesBaseUrl = "https://raw.githubusercontent.com/blu2ris-create/health-cluster-audio/main/voices/";
         
         let audioCtx = null;
         const audioBufferCache = {};
+
+        function enqueueCall(data) {
+            if (!data || !data.id || seenIds.has(data.id)) return;
+            seenIds.add(data.id);
+            callQueue.push(data);
+            saveQueue();
+            processQueue();
+        }
 
         function getClinicsMap() {
             // القائمة المحدثة والكاملة للعيادات
@@ -272,9 +315,9 @@
 
         function updateLiveDate() {
             const now = new Date();
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: CLINIC_TIMEZONE };
             const dateString = now.toLocaleDateString('ar-SA', options);
-            const dateKeyString = now.toISOString().split('T')[0];
+            const dateKeyString = now.toLocaleDateString('en-CA', { timeZone: CLINIC_TIMEZONE });
 
             const dateElement = document.getElementById('liveDateDisplay');
             if (dateElement) {
@@ -307,12 +350,7 @@
                 if (event.key === 'umran_latest_call_event' && isScreenActive) {
                     try {
                         const data = JSON.parse(event.newValue);
-                        if (data && data.id > lastProcessedId) {
-                            lastProcessedId = data.id;
-                            localStorage.setItem('umran_last_processed_id', lastProcessedId);
-                            callQueue.push(data);
-                            processQueue();
-                        }
+                        enqueueCall(data);
                     } catch(e) {}
                 }
             });
@@ -332,12 +370,7 @@
                 if (topic === uniqueTopic && isScreenActive) {
                     try {
                         const data = JSON.parse(message.toString());
-                        if (data.id > lastProcessedId) {
-                            lastProcessedId = data.id;
-                            localStorage.setItem('umran_last_processed_id', lastProcessedId);
-                            callQueue.push(data);
-                            processQueue();
-                        }
+                        enqueueCall(data);
                     } catch (e) {}
                 }
             });
@@ -362,6 +395,10 @@
             audioCtx = new AudioContext();
 
             preloadAudioBuffers(["ding.mp3", "please_wait.mp3", "goto.mp3"]);
+
+            // استرجاع النداءات التي لم تُنطق قبل إعادة التحميل ومتابعتها
+            restoreQueue();
+            processQueue();
         }
 
         function trimSilence(buffer) {
@@ -419,6 +456,7 @@
             }
         }
 
+        // تشغيل التسلسل الصوتي، ولا تنتهي الدالة إلا بعد انتهاء الصوت فعلياً
         async function playMergedSequence(fileList) {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') {
@@ -454,10 +492,15 @@
                 }
             }
 
-            const source = audioCtx.createBufferSource();
-            source.buffer = masterBuffer;
-            source.connect(audioCtx.destination);
-            source.start(0);
+            await new Promise((resolve) => {
+                const source = audioCtx.createBufferSource();
+                source.buffer = masterBuffer;
+                source.connect(audioCtx.destination);
+                source.onended = () => resolve();
+                source.start(0);
+                // احتياط: إذا لم يُطلق حدث الانتهاء لأي سبب، نكمل بعد مدة الصوت + ثانيتين
+                setTimeout(resolve, masterBuffer.duration * 1000 + 2000);
+            });
         }
 
         function sendCall() {
@@ -476,7 +519,7 @@
             }
 
             const callData = {
-                id: Date.now(),
+                id: Date.now() + '_' + Math.random().toString(16).slice(2, 8),
                 patientNumber: patientNum,
                 patientAudioFile: patientNum + '.mp3',
                 clinicName: clinicName,
@@ -502,6 +545,13 @@
 
             isCalling = true;
             const data = callQueue.shift();
+            currentCall = data;
+            saveQueue();
+
+            // عرض النداء على الشاشة عند حلول دوره
+            document.getElementById('mainPatient').innerText = data.patientNumber;
+            document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
+            saveToArchive(data);
 
             try {
                 await preloadAudioBuffers([data.patientAudioFile, data.clinicAudioFile]);
@@ -515,29 +565,25 @@
                 ];
 
                 await playMergedSequence(sequence);
-
-                document.getElementById('mainPatient').innerText = data.patientNumber;
-                document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
-
-                saveToArchive(data);
             } catch (error) {
-                document.getElementById('mainPatient').innerText = data.patientNumber;
-                document.getElementById('mainClinic').innerText = `التوجه إلى: ${data.clinicName}`;
-                saveToArchive(data);
             } finally {
+                // اكتمل النداء فنزيله من الحفظ
+                currentCall = null;
+                saveQueue();
+                // الصوت انتهى → ننتظر 15 ثانية كاملة ثم ننتقل للنداء التالي
                 setTimeout(() => {
                     isCalling = false;
                     processQueue();
-                }, 3000);
+                }, CALL_GAP_MS);
             }
         }
 
         function saveToArchive(data) {
             let archive = JSON.parse(localStorage.getItem('umran_health_archive') || '[]');
-            const currentTime = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const currentTime = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: CLINIC_TIMEZONE });
             
             archive.unshift({ name: data.patientNumber, clinic: data.clinicName, time: currentTime });
-            if (archive.length > 10) archive.pop();
+            if (archive.length > ARCHIVE_MAX_ITEMS) archive.length = ARCHIVE_MAX_ITEMS;
 
             localStorage.setItem('umran_health_archive', JSON.stringify(archive));
             renderArchive(archive);
