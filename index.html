@@ -59,13 +59,16 @@
         .clinics-scroll-box { max-height: 180px; overflow-y: auto; border: 1px solid #334155; padding: 10px; border-radius: 8px; background: #0b0f19; }
         .clinic-tag { display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; padding: 6px 12px; border-radius: 8px; margin: 4px; font-size: 0.9rem; color: #f8fafc; justify-content: space-between; width: 100%; }
         .clinic-tag button { background: none; border: none; color: #ef4444; font-weight: bold; cursor: pointer; }
+        #connDot { position: fixed; bottom: 10px; right: 10px; z-index: 9998; display: none; font-size: 0.8rem; font-weight: bold; }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+    <script>if (typeof mqtt === 'undefined') { document.write('<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"><\/script>'); }</script>
 </head>
 <body>
 
     <button id="fullscreenBtn" onclick="requestFullscreen()">📺 ملء الشاشة</button>
+    <div id="connDot"></div>
 
     <div id="roleSelector">
         <div class="mode-card">
@@ -191,6 +194,16 @@
         try {
             client = mqtt.connect(brokerUrl, { clientId: clientId, keepalive: 60, reconnectPeriod: 1000 });
         } catch(e) {}
+
+        // رقم إصدار الملف (يظهر بجانب حالة الاتصال في شاشة العرض للتأكد أن كل الأجهزة تعمل بنفس الإصدار)
+        const APP_VERSION = 3;
+
+        function setConnDot(isOn) {
+            const el = document.getElementById('connDot');
+            if (!el) return;
+            el.innerText = (isOn ? '● متصل' : '● غير متصل') + ' · v' + APP_VERSION;
+            el.style.color = isOn ? '#34d399' : '#ef4444';
+        }
 
         let isScreenActive = false;
         let isCalling = false;
@@ -364,7 +377,12 @@
         if (client) {
             client.on('connect', () => {
                 client.subscribe(uniqueTopic);
+                setConnDot(true);
             });
+            client.on('reconnect', () => setConnDot(false));
+            client.on('close', () => setConnDot(false));
+            client.on('offline', () => setConnDot(false));
+            client.on('error', () => setConnDot(false));
 
             client.on('message', (topic, message) => {
                 if (topic === uniqueTopic && isScreenActive) {
@@ -389,6 +407,8 @@
             isScreenActive = true;
             document.getElementById('displayOverlay').style.display = 'none';
             document.getElementById('displayScreen').style.display = 'flex';
+            document.getElementById('connDot').style.display = 'block';
+            setConnDot(!!(client && client.connected));
             requestFullscreen();
 
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -437,7 +457,16 @@
         async function loadAudioBuffer(fileName) {
             if (audioBufferCache[fileName]) return audioBufferCache[fileName];
             try {
-                const response = await fetch(voicesBaseUrl + fileName);
+                // مهلة 8 ثوانٍ حتى لا يتجمد الطابور إذا تعلّق تحميل الملف
+                const controller = new AbortController();
+                const fetchTimer = setTimeout(() => controller.abort(), 8000);
+                let response;
+                try {
+                    response = await fetch(voicesBaseUrl + fileName, { signal: controller.signal });
+                } finally {
+                    clearTimeout(fetchTimer);
+                }
+                if (!response.ok) return null;
                 const arrayBuffer = await response.arrayBuffer();
                 let decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
                 
@@ -460,7 +489,11 @@
         async function playMergedSequence(fileList) {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') {
-                await audioCtx.resume();
+                // مهلة حماية حتى لا ينتظر الاستئناف إلى الأبد
+                await Promise.race([
+                    audioCtx.resume().catch(() => {}),
+                    new Promise(resolve => setTimeout(resolve, 1500))
+                ]);
             }
 
             let loadedBuffers = [];
@@ -503,6 +536,22 @@
             });
         }
 
+        // إظهار نتيجة الإرسال الحقيقية (نجاح فقط إذا وصل النداء للخادم فعلاً)
+        function showSendResult(ok) {
+            const msg = document.getElementById('successMsg');
+            if (ok) {
+                msg.innerText = 'تم إرسال النداء للشاشة بنجاح! ✓';
+                msg.style.backgroundColor = '#065f46';
+                msg.style.color = '#34d399';
+            } else {
+                msg.innerText = '⚠️ لا يوجد اتصال بالخادم، النداء لن يصل إلا للشاشة المفتوحة على نفس الجهاز';
+                msg.style.backgroundColor = '#7f1d1d';
+                msg.style.color = '#fca5a5';
+            }
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, ok ? 2000 : 6000);
+        }
+
         function sendCall() {
             const input = document.getElementById('patientNumberInput');
             const patientNum = input.value.trim();
@@ -527,14 +576,14 @@
             };
 
             if (client && client.connected) {
-                client.publish(uniqueTopic, JSON.stringify(callData));
+                client.publish(uniqueTopic, JSON.stringify(callData), { qos: 1 }, (err) => {
+                    showSendResult(!err);
+                });
+            } else {
+                showSendResult(false);
             }
 
             localStorage.setItem('umran_latest_call_event', JSON.stringify(callData));
-
-            const msg = document.getElementById('successMsg');
-            msg.style.display = 'block';
-            setTimeout(() => { msg.style.display = 'none'; }, 2000);
             
             input.value = '';
             input.focus();
@@ -554,17 +603,23 @@
             saveToArchive(data);
 
             try {
-                await preloadAudioBuffers([data.patientAudioFile, data.clinicAudioFile]);
+                // حماية: إذا تعلّق التحميل أو التشغيل لأي سبب، لا ينتظر الطابور أكثر من 60 ثانية
+                await Promise.race([
+                    (async () => {
+                        await preloadAudioBuffers([data.patientAudioFile, data.clinicAudioFile]);
 
-                const sequence = [
-                    "ding.mp3",
-                    "please_wait.mp3",
-                    data.patientAudioFile,
-                    "goto.mp3",
-                    data.clinicAudioFile
-                ];
+                        const sequence = [
+                            "ding.mp3",
+                            "please_wait.mp3",
+                            data.patientAudioFile,
+                            "goto.mp3",
+                            data.clinicAudioFile
+                        ];
 
-                await playMergedSequence(sequence);
+                        await playMergedSequence(sequence);
+                    })(),
+                    new Promise(resolve => setTimeout(resolve, 60000))
+                ]);
             } catch (error) {
             } finally {
                 // اكتمل النداء فنزيله من الحفظ
