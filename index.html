@@ -132,7 +132,8 @@
         <button id="adminToggleBtn" class="admin-gear-btn" onclick="toggleAdminPanel()" title="إعدادات الأدمن">⚙️</button>
         
         <h3 class="text-center mb-1 text-warning fw-bold pt-2">لوحة تحكم النداء الآلي</h3>
-        <p class="text-center text-muted small mb-4">مركز صحي الصالحية للرعاية الأولية</p>
+        <p class="text-center text-muted small mb-2">مركز صحي الصالحية للرعاية الأولية</p>
+        <div id="controlConnStatus" class="text-center small fw-bold mb-4">● غير متصل</div>
         
         <div class="mb-3">
             <label class="form-label">رقم المراجع (مثال: 46):</label>
@@ -199,11 +200,24 @@
         const APP_VERSION = 3;
 
         function setConnDot(isOn) {
+            const text = (isOn ? '● متصل' : '● غير متصل') + ' · v' + APP_VERSION;
+            const color = isOn ? '#34d399' : '#ef4444';
+            // مؤشر شاشة العرض
             const el = document.getElementById('connDot');
-            if (!el) return;
-            el.innerText = (isOn ? '● متصل' : '● غير متصل') + ' · v' + APP_VERSION;
-            el.style.color = isOn ? '#34d399' : '#ef4444';
+            if (el) {
+                el.innerText = text;
+                el.style.color = color;
+            }
+            // مؤشر لوحة التحكم
+            const ctrl = document.getElementById('controlConnStatus');
+            if (ctrl) {
+                ctrl.innerText = text;
+                ctrl.style.color = color;
+            }
         }
+
+        // عند فشل تحميل مكتبة الاتصال أو قبل الاتصال: يظهر «غير متصل» افتراضياً
+        document.addEventListener('DOMContentLoaded', () => setConnDot(!!(client && client.connected)));
 
         let isScreenActive = false;
         let isCalling = false;
@@ -401,6 +415,7 @@
             } else {
                 document.getElementById('controlScreen').style.display = 'block';
             }
+            setConnDot(!!(client && client.connected));
         }
 
         async function activateDisplayScreen() {
